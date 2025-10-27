@@ -83,7 +83,7 @@ def program_declaration_tb_dense_fr(
 
     tokenizer = BERTTokenizer()
     question["input_ids"] = JointSensor(story_contain, "question", "story", forward=tokenizer, device=device)
-    classifier = Bert(device=device, drp=dropout, num_classes=6, tokenizer=tokenizer.tokenizer)
+    classifier = Bert.from_pretrained('bert-base-uncased', device=device, drp=dropout)(device=device, drp=dropout, num_classes=6, tokenizer=tokenizer.tokenizer)
     question[answer_class] = ModuleLearner("input_ids", module=classifier, device=device)
 
     poi_list = [
