@@ -26,6 +26,7 @@ def create_tb_dense(
 @app.command()
 def temporal_fr(
     # Training parameters
+    model: str = typer.Option("bert", help="Model used"),
     epoch: int = typer.Option(1, help="Number of training epochs"),
     lr: float = typer.Option(1e-5, help="Learning rate"),
     batch_size: int = typer.Option(4, help="Batch size for training"),
@@ -59,6 +60,7 @@ def temporal_fr(
     import tempQchain.temporal_FR as temporal_FR
 
     args = argparse.Namespace(
+        model=model,
         epoch=epoch,
         lr=lr,
         cuda=cuda,

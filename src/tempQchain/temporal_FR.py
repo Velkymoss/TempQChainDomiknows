@@ -95,7 +95,7 @@ def train(
     best_epoch = 0
 
     logger.info("Starting FR training...")
-    logger.info("Model: Modern Bert Base")
+    logger.info(f"Model: {args.model}")
     logger.info("Using Hyperparameters:")
     logger.info(f"Learning Rate: {args.lr}")
     logger.info(f"Batch Size: {args.batch_size}")
@@ -111,7 +111,7 @@ def train(
     if args.use_mlflow:
         mlflow.log_params(
             {
-                "model": "Modern Bert Base",
+                "model": args.model,
                 "learning_rate": args.lr,
                 "batch_size": args.batch_size,
                 "pmd": args.pmd,
@@ -195,7 +195,7 @@ def train(
                 + str(args.lr)
                 + program_addition
                 + "_model_"
-                + "modernbert"
+                + args.model
             )
             model_path = os.path.join(args.results_path, new_file)
             program.save(model_path)
@@ -244,7 +244,7 @@ def main(args: Any) -> None:
     torch.manual_seed(SEED)
 
     if args.use_mlflow:
-        run_name = f"modernbert_{datetime.now().strftime('%Y-%d-%m_%H:%M:%S')}"
+        run_name = f"{args.model}_{datetime.now().strftime('%Y-%d-%m_%H:%M:%S')}"
         logger.info(f"Starting run with id {run_name}")
         mlflow.set_experiment("Temporal_FR")
         mlflow.start_run(run_name=run_name)
