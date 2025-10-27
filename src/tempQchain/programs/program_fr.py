@@ -1,5 +1,3 @@
-import json
-
 import torch
 from domiknows.program import SolverPOIProgram
 from domiknows.program.loss import NBCrossEntropyLoss
@@ -26,8 +24,8 @@ from tempQchain.graphs.graph_fr import (
 )
 from tempQchain.logger import get_logger
 from tempQchain.programs.models import (
-    ModernBert,
-    ModernBERTTokenizer,
+    Bert,
+    BERTTokenizer,
 )
 from tempQchain.programs.utils import check_symmetric, check_transitive, read_label, str_to_int_list
 
@@ -83,14 +81,9 @@ def program_declaration_tb_dense_fr(
 
     question[answer_class] = FunctionalSensor(story_contain, "label", forward=read_label, label=True, device=device)
 
-    with open("data/tb_dense_special_tokens.json") as f:
-        special_tokens = json.load(f)
-
-    tokenizer = ModernBERTTokenizer(special_tokens=special_tokens)
-    question["input_ids"] = JointSensor(
-        story_contain, "question", "story", forward=tokenizer, device=device
-    )
-    classifier = ModernBert(device=device, drp=dropout, num_classes=6, tokenizer=tokenizer.tokenizer)
+    tokenizer = BERTTokenizer()
+    question["input_ids"] = JointSensor(story_contain, "question", "story", forward=tokenizer, device=device)
+    classifier = Bert(device=device, drp=dropout, num_classes=6, tokenizer=tokenizer.tokenizer)
     question[answer_class] = ModuleLearner("input_ids", module=classifier, device=device)
 
     poi_list = [

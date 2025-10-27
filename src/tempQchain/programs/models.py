@@ -12,6 +12,8 @@ from transformers import (
 class BERTTokenizer:
     def __init__(self):
         self.tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+        special_tokens = ["<e1>", "</e1>", "<e2>", "</e2>"]
+        self.tokenizer.add_tokens(special_tokens)
 
     def __call__(self, _, question, story):
         encoded_input = self.tokenizer(question, story, padding="max_length", truncation=True)
@@ -22,8 +24,8 @@ class BERTTokenizer:
 class ModernBERTTokenizer:
     def __init__(self, special_tokens: list[str] = None):
         self.tokenizer = AutoTokenizer.from_pretrained("answerdotai/ModernBERT-base")
-        if special_tokens:
-            self.tokenizer.add_tokens(special_tokens)
+        special_tokens = ["<e1>", "</e1>", "<e2>", "</e2>"]
+        self.tokenizer.add_tokens(special_tokens)
 
     def __call__(self, _, question, story):
         encoded_input = self.tokenizer(
@@ -69,8 +71,8 @@ class ModernBert(nn.Module):
         return logits
 
 
-class MultipleClassYN(BertPreTrainedModel):
-    def __init__(self, config, device="cpu", drp=False):
+class Bert(BertPreTrainedModel):
+    def __init__(self, config, device="cpu", num_classes=6, drp=False, tokenizer=None):
         super().__init__(config)
 
         if drp:
@@ -79,40 +81,21 @@ class MultipleClassYN(BertPreTrainedModel):
 
         self.cur_device = device
         self.bert = BertModel(config)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        self.num_classes = 2
-        self.classifier = nn.Linear(config.hidden_size, self.num_classes)
-        self.sigmoid = nn.Sigmoid()
-        self.softmax = nn.Softmax()
-
-    def forward(self, input_ids):
-        outputs = self.bert(input_ids)
-        pooled_output = outputs[1]
-        pooled_output = self.dropout(pooled_output)
-        output = self.classifier(pooled_output)
-
-        return output
-
-
-class MultipleClassYN_Hidden(BertPreTrainedModel):
-    def __init__(self, config, device="cpu", drp=False):
-        super().__init__(config)
-
-        if drp:
-            config.hidden_dropout_prob = 0.0
-            config.attention_probs_dropout_prob = 0.0
-
-        self.cur_device = device
-        self.bert = BertModel(config)
+        if tokenizer is not None:
+            self.bert.resize_token_embeddings(len(tokenizer))
+            
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.hidden_size = config.hidden_size
 
+        self.num_classes = num_classes
+        self.classifier = nn.Linear(self.hidden_size, self.num_classes)
+
     def forward(self, input_ids):
         outputs = self.bert(input_ids)
         pooled_output = outputs[1]
         pooled_output = self.dropout(pooled_output)
-
-        return pooled_output
+        logits = self.classifier(pooled_output)
+        return logits
 
 
 class ClassifyLayer(nn.Module):

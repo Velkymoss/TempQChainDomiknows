@@ -1,6 +1,5 @@
 import json
 import os
-import re
 from string import Template
 
 from bs4 import BeautifulSoup
@@ -76,21 +75,21 @@ def create_object_info(data_df):
     return doc_objects
 
 
-def get_temporal_question(relation):
+def get_temporal_question(relation: str) -> str:
     if relation.lower() == "before":
-        template = Template("Did <$event1> happen before <$event2?>")
+        question = "Did <e1> happen before <e2>?"
     elif relation.lower() == "after":
-        template = Template("Did <$event1> happen after <$event2>?")
+        question = "Did <e1> happen after <e2>?"
     elif relation.lower() == "includes":
-        template = Template("Does <$event1> temporally include <$event2>?")
+        question = "Does <e1> temporally include <e2>?"
     elif relation.lower() == "is included":
-        template = Template("Is <$event1> temporally included in <$event2>?")
+        question = "Is <e1> temporally included in <e2>?"
     elif relation.lower() == "simultaneous":
-        template = Template("Did <$event1> happen simultaneously with <$event2>?")
+        question = "Did <e1> happen simultaneously with <e2>?"
     else:
-        template = Template("Is the temporal relation between <$event1> and <$event2> vague?")
+        question = "Is the temporal relation between <e1> and <e2> vague?"
 
-    return template
+    return question
 
 
 def create_yn(event_pair, relation, relation_set):
@@ -98,9 +97,9 @@ def create_yn(event_pair, relation, relation_set):
     answers = []
 
     for r in relation_set:
-        template = get_temporal_question(r)
+        question = get_temporal_question(r)
 
-        q_texts.append(template.substitute(event1=event_pair[0], event2=event_pair[1]))
+        q_texts.append(question)
 
         if r.lower() == relation.lower():
             answers.append(["Yes"])
@@ -110,14 +109,10 @@ def create_yn(event_pair, relation, relation_set):
     return q_texts, answers
 
 
-def create_fr(event_pair, relation):
-    # template = Template("What is the temporal relation between $event1 and $event2?")
-    template = Template("When did <$event1> happen in time compared to <$event2?>")
-    q_text = template.substitute(event1=event_pair[0], event2=event_pair[1])
-
+def create_fr(relation: str) -> tuple[str, list[str]]:
+    question = "When did <e1> happen in time compared to <e2>"
     answer = [relation]
-
-    return q_text, answer
+    return question, answer
 
 
 def create_chain(doc_pair_relations, trans_triples, inverse):
@@ -609,72 +604,6 @@ def extract_all_entities(soup: BeautifulSoup) -> dict:
         events[timex.get("tid")] = timex.get_text().strip()
 
     return events
-
-
-def parse_article(filepath: str) -> BeautifulSoup:
-    """Parse the XML article from TB-Dense and return a BeautifulSoup object."""
-    try:
-        with open(filepath, "r") as file:
-            content = file.read()
-    except FileNotFoundError:
-        raise (f"File not found: {filepath}")
-    soup = BeautifulSoup(content, "xml")
-    return soup
-
-
-def extract_article_text(soup: BeautifulSoup) -> str | None:
-    text_element = soup.find("TEXT")
-    if text_element:
-        return text_element.get_text(separator=" ", strip=True)
-    return None
-
-
-def join_sentence_tokens(tokens: list[str]) -> str:
-    """Join tokens and fix spacing around punctuation."""
-    # Join with spaces first
-    text = " ".join(tokens)
-    # remove new line characters
-    text = re.sub(r"\n+", " ", text)
-    # Remove spaces before punctuation
-    text = re.sub(r"\s+([,.!?;:])", r"\1", text)
-    # Ensure space after punctuation (optional)
-    text = re.sub(r"([,.!?;:])([A-Za-z])", r"\1 \2", text)
-    return text
-
-
-def get_t0(article_soup: BeautifulSoup) -> str:
-    creation_date = article_soup.find("TIMEX3", functionInDocument="CREATION_TIME").get("value")
-    return creation_date if len(creation_date) == 10 else creation_date[:10]
-
-
-def get_clean_article(article_soup: BeautifulSoup) -> tuple[str, set[str]]:
-    special_tokens = set()
-    cleaned_sentences = []
-    sentence_tokens = []
-    sentences = article_soup.find_all("s")
-    for sentence in sentences:
-        for child in sentence.children:
-            if "<" in str(child) and "</" in str(child):
-                if child.name == "EVENT":
-                    sentence_tokens.append(
-                        f"<{child.get('eid')}>{child.get_text(strip=True, separator=' ')}<{child.get('eid')}/>"
-                    )
-                    special_tokens.add(f"<{child.get('eid')}>")
-                    special_tokens.add(f"<{child.get('eid')}/>")
-                elif child.name == "TIMEX3":
-                    sentence_tokens.append(
-                        f"<{child.get('tid')}>{child.get_text(strip=True, separator=' ')}</{child.get('tid')}>"
-                    )
-                    special_tokens.add(f"<{child.get('tid')}>")
-                    special_tokens.add(f"<{child.get('tid')}/>")
-                else:
-                    sentence_tokens.append(child.get_text(strip=True, separator=" "))
-            else:
-                sentence_tokens.append(child.get_text(strip=True, separator=" "))
-        sentence = join_sentence_tokens(sentence_tokens)
-        cleaned_sentences.append(sentence)
-        sentence_tokens = []
-    return " ".join(cleaned_sentences), special_tokens
 
 
 def fill_template(relations, type):

@@ -1,4 +1,3 @@
-import json
 import os
 from statistics import mean
 
@@ -13,9 +12,6 @@ from tempQchain.data.utils import (
     create_object_info,
     create_story_triplets,
     create_yn,
-    get_clean_article,
-    get_t0,
-    parse_article,
     read_txt,
     save_json,
     save_rules,
@@ -127,15 +123,12 @@ def process_tb_dense(
     logger.info(f"Dev data: {len(dev_df)}")
     logger.info(f"Test data: {len(test_df)}")
 
-    special_tokens = set()
-
     for mode, df in [("train", train_df), ("dev", dev_df), ("test", test_df)]:
         logger.info(f"Processing {mode} data...")
         doc_pair_relations = []
         for doc_id in df.doc_id.unique():
             doc_tlinks = df.loc[df["doc_id"] == doc_id]
             doc_pairs = list(zip(doc_tlinks.event1_id.to_list(), doc_tlinks.event2_id.to_list()))
-            doc_relations = doc_tlinks.relation.to_list()
             doc_pair_relations.append(dict(zip(doc_pairs, doc_tlinks.relation.to_list())))
 
         # Calculate statistics
@@ -221,7 +214,7 @@ def process_tb_dense(
                     q_id += 1
 
                 # Add the FR question
-                question, answer = create_fr(query, row["relation"])
+                question, answer = create_fr(row["relation"])
                 question_info = {
                     "num_facts": doc_chains[doc_index][query]["num_facts"],
                     "reasoning_steps": doc_chains[doc_index][query]["reasoning_steps"],
@@ -256,21 +249,6 @@ def process_tb_dense(
         logger.info("Building final data structure...")
         data = build_data(list(df.doc_id.unique()), doc_story_triplets, doc_questions, doc_objects_info, doc_facts_info)
 
-        # Add story content from original articles
-        logger.info("Adding story content from articles...")
-        ARTICLE_PATH = "data/timebank_1_2/data/extra/"
-
-        for article in data:
-            filename = article.get("identifier") + ".tml"
-            filepath = os.path.join(ARTICLE_PATH, filename)
-            article_soup = parse_article(filepath)
-            t0_value = get_t0(article_soup)
-            clean_article, article_special_tokens = get_clean_article(article_soup)
-            article_header = f"Written on <t0>{t0_value}</t0>"
-            full_article = article_header + " " + clean_article
-            article["story"] = [full_article]
-            special_tokens.update(article_special_tokens)
-
         # Save to JSON
         logger.info("Saving data to JSON...")
         save_json(saving_path, f"tb_dense_{mode}.json", data)
@@ -279,9 +257,6 @@ def process_tb_dense(
         # Save rules
         logger.info("Saving rules...")
         save_rules(inverse, "symmetry")
-
-    with open(os.path.join(saving_path, "tb_dense_special_tokens.json"), "w") as f:
-        json.dump(list(special_tokens), f)
 
     logger.info("TB-Dense processing completed successfully!")
 
