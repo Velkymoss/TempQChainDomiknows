@@ -81,6 +81,7 @@ class Bert(BertPreTrainedModel):
 
         self.cur_device = device
         self.bert = BertModel(config)
+        self.bert.to(device)
         if tokenizer is not None:
             self.bert.resize_token_embeddings(len(tokenizer))
             
