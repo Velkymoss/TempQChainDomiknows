@@ -4,8 +4,12 @@ import json
 from typing import Any
 
 from pydantic import BaseModel, field_validator
+from tqdm import tqdm
 
+from tempQchain.logger import get_logger
 from tempQchain.readers.utils import LABELS_INT, create_fr, get_batch_question_article, get_temporal_question
+
+logger = get_logger(__name__)
 
 
 class IntermediateFact(BaseModel):
@@ -316,7 +320,7 @@ class TemporalReader:
         self.batches: list[list[BatchQuestion]] = []
 
     def create_batches(self) -> None:
-        for story in self.data:
+        for story in tqdm(self.data, desc="Processing artice...", unit="article"):
             story = Story(**story)
             story_batches = story.create_batches_for_story(self.batch_size, self.question_type)
             self.batches.extend(story_batches)
