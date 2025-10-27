@@ -146,8 +146,12 @@ def train(
                 metric = train_metrics[key]
                 train_f1.append(metric)
                 logger.info(f"{label} F1: {metric}")
+                if args.use_mlflow:
+                    mlflow.log_metric(f"Train F1 {label}", metric)
             train_macro_f1 = sum(train_f1) / len(train_f1)
             logger.info(f"Train Macro F1: {train_macro_f1}")
+            if args.use_mlflow:
+                    mlflow.log_metric("Train Macro F1", train_macro_f1)
 
         train_loss = program.model.loss.value()["answer_class"]
         eval_loss = get_avg_loss(program, eval_set, cur_device, "eval")
@@ -162,6 +166,8 @@ def train(
         logger.info(f"Dev F1: {f1}%")
         for label, score in zip(LABEL_STRINGS, f1_per_class):
             logger.info(f"Dev F1 {label}: {score}%")
+            if args.use_mlflow:
+                mlflow.log_metric(f"Dev F1 {label}", score)
         if args.constraints:
             logger.info(f"Dev Constraint Rate: {constraint_rate}")
         if args.use_mlflow:
