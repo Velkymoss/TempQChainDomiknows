@@ -16,9 +16,10 @@ class BERTTokenizer:
         self.tokenizer.add_tokens(special_tokens)
 
     def __call__(self, _, question, story):
-        encoded_input = self.tokenizer(question, story, padding="max_length", truncation=True)
+        encoded_input = self.tokenizer(question, story, padding="max_length", truncation=True, return_tensors="pt")
         input_ids = encoded_input["input_ids"]
-        return torch.LongTensor(input_ids)
+        attention_mask = encoded_input["attention_mask"]
+        return input_ids, attention_mask
 
 
 class ModernBERTTokenizer:
@@ -76,7 +77,6 @@ class Bert(nn.Module):
         super().__init__()
 
         self.bert = BertModel.from_pretrained("bert-base-uncased")
-        self.bert.to(device)
 
         if tokenizer is not None:
             self.bert.resize_token_embeddings(len(tokenizer), mean_resizing=True)
@@ -89,9 +89,9 @@ class Bert(nn.Module):
         
         self.to(device)
 
-    def forward(self, input_ids):
-        outputs = self.bert(input_ids)
-        pooled_output = outputs[1]
+    def forward(self, input_ids, attention_mask):
+        outputs = self.bert(input_ids = input_ids, attention_mask=attention_mask)
+        pooled_output = outputs.pooler_output
         pooled_output = self.dropout(pooled_output)
         logits = self.classifier(pooled_output)
         return logits
