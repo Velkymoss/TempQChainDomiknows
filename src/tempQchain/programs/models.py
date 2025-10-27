@@ -71,25 +71,23 @@ class ModernBert(nn.Module):
         return logits
 
 
-class Bert(BertPreTrainedModel):
-    def __init__(self, config, device="cpu", num_classes=6, drp=False, tokenizer=None):
-        super().__init__(config)
+class Bert(nn.Module):
+    def __init__(self, num_classes=6, drp=False, device="cpu", tokenizer=None):
+        super().__init__()
 
-        if drp:
-            config.hidden_dropout_prob = 0.0
-            config.attention_probs_dropout_prob = 0.0
-
-        self.cur_device = device
-        self.bert = BertModel(config)
+        self.bert = BertModel.from_pretrained("bert-base-uncased")
         self.bert.to(device)
-        if tokenizer is not None:
-            self.bert.resize_token_embeddings(len(tokenizer))
-            
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        self.hidden_size = config.hidden_size
 
+        if tokenizer is not None:
+            self.bert.resize_token_embeddings(len(tokenizer), mean_resizing=True)
+
+        dropout_prob = 0.0 if drp else self.bert.config.hidden_dropout_prob
+        self.dropout = nn.Dropout(dropout_prob)
+        self.hidden_size = self.bert.config.hidden_size
         self.num_classes = num_classes
         self.classifier = nn.Linear(self.hidden_size, self.num_classes)
+        
+        self.to(device)
 
     def forward(self, input_ids):
         outputs = self.bert(input_ids)

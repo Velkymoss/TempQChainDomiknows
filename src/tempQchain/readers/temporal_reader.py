@@ -320,7 +320,7 @@ class TemporalReader:
         self.batches: list[list[BatchQuestion]] = []
 
     def create_batches(self) -> None:
-        for story in tqdm(self.data, desc="Processing artice...", unit="article"):
+        for story in tqdm(self.data, desc="Processing article", unit="article"):
             story = Story(**story)
             story_batches = story.create_batches_for_story(self.batch_size, self.question_type)
             self.batches.extend(story_batches)
