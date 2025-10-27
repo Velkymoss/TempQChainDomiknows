@@ -261,6 +261,7 @@ def main(args: Any) -> None:
     else:
         cur_device = "cuda:" + str(cuda_number) if torch.cuda.is_available() else "cpu"
 
+    logger.info("Loading training data...")
     train_file = "tb_dense_train.json"
     training_set = TemporalReader.from_file(
         file_path=os.path.join(args.data_path, train_file), question_type="FR", batch_size=args.batch_size
@@ -272,11 +273,13 @@ def main(args: Any) -> None:
         logger.info(f"Calculated class weigths {class_weights}")
         class_weights = torch.FloatTensor(class_weights).to(cur_device)
 
+    logger.info("Loading development data...")
     eval_file = "tb_dense_dev.json"
     eval_set = TemporalReader.from_file(
         file_path=os.path.join(args.data_path, eval_file), question_type="FR", batch_size=args.batch_size
     )
 
+    logger.info("Loading test data...")
     test_file = "tb_dense_test.json"
     test_set = TemporalReader.from_file(
         file_path=os.path.join(args.data_path, test_file), question_type="FR", batch_size=args.batch_size
