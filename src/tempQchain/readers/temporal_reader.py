@@ -4,8 +4,12 @@ import json
 from typing import Any
 
 from pydantic import BaseModel, field_validator
+from tqdm import tqdm
 
-from tempQchain.readers.utils import LABELS_INT, create_fr, get_temporal_question
+from tempQchain.logger import get_logger
+from tempQchain.readers.utils import LABELS_INT, create_fr, get_batch_question_article, get_temporal_question
+
+logger = get_logger(__name__)
 
 
 class IntermediateFact(BaseModel):
@@ -102,13 +106,17 @@ class Question(BaseModel):
         return intermediate_facts, constraint
 
     def create_intermediate_question(
-        self, story: Story, intermediate_fact: IntermediateFact, id: int
+        self,
+        identifier: str,
+        intermediate_fact: IntermediateFact,
+        id: int,
     ) -> tuple[str, BatchQuestion]:
+        article = get_batch_question_article(identifier, intermediate_fact.event1, intermediate_fact.event2)
         if self.q_type == "FR":
-            question, _ = create_fr((intermediate_fact.event1, intermediate_fact.event2), intermediate_fact.relation)
+            question, _ = create_fr(intermediate_fact.relation)
             batch_question = BatchQuestion(
                 question_text=question,
-                story_text=story.story_text,
+                story_text=article,
                 q_type=self.q_type,
                 candidate_answers=self.candidate_answers,
                 relation_info="",
@@ -120,7 +128,7 @@ class Question(BaseModel):
             question = template.substitute(event1=intermediate_fact.event1, event2=intermediate_fact.event2)
             batch_question = BatchQuestion(
                 question_text=question,
-                story_text=story.story_text,
+                story_text=article,
                 q_type=self.q_type,
                 candidate_answers=self.candidate_answers,
                 relation_info="",
@@ -135,11 +143,15 @@ class Question(BaseModel):
         id: int,
         question_id_map: dict[str, int],
     ) -> tuple[list[BatchQuestion], list[str], int]:
+        event_1 = self.query[0]
+        event_2 = self.query[1]
+        article = get_batch_question_article(story.identifier, event_1, event_2)
+
         if self.query_str not in story.facts_info or self.asked_relation not in story.facts_info[self.query_str]:
             question_id_map[self.unique_id] = id
             target_question = BatchQuestion(
                 question_text=self.question,
-                story_text=story.story_text,
+                story_text=article,
                 q_type=self.q_type,
                 candidate_answers=self.candidate_answers,
                 relation_info="",
@@ -162,7 +174,7 @@ class Question(BaseModel):
             else:
                 intermediate_ids.append(next_id)
                 question_id_map[fact.key] = next_id
-                key, intermediate_question = self.create_intermediate_question(story, fact, next_id)
+                key, intermediate_question = self.create_intermediate_question(story.identifier, fact, next_id)
                 questions.append(intermediate_question)
                 keys.append(key)
                 next_id += 1
@@ -172,7 +184,7 @@ class Question(BaseModel):
         question_id_map[self.unique_id] = id
         target_question = BatchQuestion(
             question_text=self.question,
-            story_text=story.story_text,
+            story_text=article,
             q_type=self.q_type,
             candidate_answers=self.candidate_answers,
             relation_info=relation_info,
@@ -186,6 +198,7 @@ class Question(BaseModel):
 
 
 class Story(BaseModel):
+    identifier: str
     story: list[str]
     questions: list[Question]
     facts_info: dict[str, dict]
@@ -220,7 +233,7 @@ class Story(BaseModel):
             if fact.key in question_id_map:
                 relation_info.append(str(question_id_map[fact.key]))
             else:
-                _, intermediate_question = question.create_intermediate_question(self, fact, next_id)
+                _, intermediate_question = question.create_intermediate_question(self.identifier, fact, next_id)
                 question_id_map[fact.key] = next_id
                 to_add[fact.key] = intermediate_question
                 relation_info.append(str(next_id))
@@ -242,9 +255,10 @@ class Story(BaseModel):
                 if question.q_type != question_type:
                     continue
 
+                target_article = get_batch_question_article(self.identifier, question.query[0], question.query[1])
                 target_question = BatchQuestion(
                     question_text=question.question,
-                    story_text=self.story_text,
+                    story_text=target_article,
                     q_type=question.q_type,
                     candidate_answers=question.candidate_answers,
                     relation_info="",
@@ -267,7 +281,11 @@ class Story(BaseModel):
 
             # question not in batch - add question with or without reasoning chain
             if question.unique_id not in current_batch:
-                questions, keys, batch_counter = question.create_batch_questions(self, batch_counter, question_id_map)
+                questions, keys, batch_counter = question.create_batch_questions(
+                    self,
+                    batch_counter,
+                    question_id_map,
+                )
                 for q, k in zip(questions, keys):
                     to_add[k] = q
 
@@ -302,7 +320,7 @@ class TemporalReader:
         self.batches: list[list[BatchQuestion]] = []
 
     def create_batches(self) -> None:
-        for story in self.data:
+        for story in tqdm(self.data, desc="Processing article", unit="article"):
             story = Story(**story)
             story_batches = story.create_batches_for_story(self.batch_size, self.question_type)
             self.batches.extend(story_batches)

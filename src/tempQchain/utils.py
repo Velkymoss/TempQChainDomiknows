@@ -19,3 +19,11 @@ def get_avg_loss(
             total_loss += 1
             train_loss += loss
     return train_loss / total_loss
+
+def get_train_labels(dataset: list[dict[str, str]]) -> list[int]:
+    labels = []
+    for batch in dataset:
+        batch_labels = batch["labels"].split("@@")
+        batch_labels = [int(label) for label in batch_labels]
+        labels.extend(batch_labels)
+    return labels

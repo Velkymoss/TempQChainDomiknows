@@ -24,8 +24,8 @@ from tempQchain.graphs.graph_fr import (
 )
 from tempQchain.logger import get_logger
 from tempQchain.programs.models import (
-    ModernBert,
-    ModernBERTTokenizer,
+    Bert,
+    BERTTokenizer,
 )
 from tempQchain.programs.utils import check_symmetric, check_transitive, read_label, str_to_int_list
 
@@ -41,6 +41,7 @@ def program_declaration_tb_dense_fr(
     sampleSize: int = 1,
     dropout: bool = False,
     constraints: bool = False,
+    class_weights: torch.FloatTensor = None,
 ) -> LearningBasedProgram:
     program = None
 
@@ -79,11 +80,16 @@ def program_declaration_tb_dense_fr(
     )
 
     question[answer_class] = FunctionalSensor(story_contain, "label", forward=read_label, label=True, device=device)
-    question["input_ids"] = JointSensor(
-        story_contain, "question", "story", forward=ModernBERTTokenizer(), device=device
+
+    tokenizer = BERTTokenizer()
+    question["input_ids", "attention_mask"] = JointSensor(story_contain, "question", "story", forward=tokenizer, device=device)
+    classifier = Bert(              
+    device="cuda" if torch.cuda.is_available() else "cpu",
+    drp=dropout,
+    num_classes=6,
+    tokenizer=tokenizer.tokenizer
     )
-    classifier = ModernBert(device=device, drp=dropout, num_classes=6)
-    question[answer_class] = ModuleLearner("input_ids", module=classifier, device=device)
+    question[answer_class] = ModuleLearner("input_ids", "attention_mask", module=classifier, device=device)
 
     poi_list = [
         question,
@@ -103,14 +109,19 @@ def program_declaration_tb_dense_fr(
 
         poi_list.extend([inverse, transitive])
 
-    infer_list = ["ILP", "local/argmax"]  # ['ILP', 'local/argmax']
+    infer_list = ["ILP", "local/argmax"] 
     if pmd:
+        if class_weights is not None:
+            criterion = NBCrossEntropyLoss(weight=class_weights)
+        else:
+            criterion = NBCrossEntropyLoss()
+
         program = PrimalDualProgram(
             graph,
             SolverModel,
             poi=poi_list,
             inferTypes=infer_list,
-            loss=MacroAverageTracker(NBCrossEntropyLoss()),
+            loss=MacroAverageTracker(criterion),
             beta=beta,
             metric={"ILP": PRF1Tracker(DatanodeCMMetric()), "argmax": PRF1Tracker(DatanodeCMMetric("local/argmax"))},
             device=device,

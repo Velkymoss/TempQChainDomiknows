@@ -8,9 +8,9 @@ import mlflow
 import numpy as np
 import torch
 import tqdm
-import transformers
 from domiknows.program.lossprogram import LearningBasedProgram
 from sklearn.metrics import accuracy_score, f1_score
+from sklearn.utils.class_weight import compute_class_weight
 
 from tempQchain.graphs.graph_fr import answer_class
 from tempQchain.logger import get_logger
@@ -18,7 +18,7 @@ from tempQchain.programs.program_fr import (
     program_declaration_tb_dense_fr,
 )
 from tempQchain.readers.temporal_reader import TemporalReader
-from tempQchain.utils import get_avg_loss
+from tempQchain.utils import get_avg_loss, get_train_labels
 
 warnings.filterwarnings("ignore")
 
@@ -48,7 +48,9 @@ def eval(
         for question in datanode.getChildDataNodes():
             label = int(question.getAttribute(answer_class, "label"))
             labels.append(label)
-            prediction = int(torch.argmax(question.getAttribute(answer_class, "local/argmax")))
+
+            logits = question.getAttribute(answer_class, "local/argmax")
+            prediction = int(torch.argmax(logits))
             predictions.append(prediction)
 
         if args.constraints:
@@ -93,7 +95,7 @@ def train(
     best_epoch = 0
 
     logger.info("Starting FR training...")
-    logger.info("Model: Modern Bert Base")
+    logger.info(f"Model: {args.model}")
     logger.info("Using Hyperparameters:")
     logger.info(f"Learning Rate: {args.lr}")
     logger.info(f"Batch Size: {args.batch_size}")
@@ -109,7 +111,7 @@ def train(
     if args.use_mlflow:
         mlflow.log_params(
             {
-                "model": "Modern Bert Base",
+                "model": args.model,
                 "learning_rate": args.lr,
                 "batch_size": args.batch_size,
                 "pmd": args.pmd,
@@ -123,31 +125,49 @@ def train(
             }
         )
 
-    if args.optim != "adamw":
+    optimizer_instance = torch.optim.AdamW(program.model.parameters(), lr=args.lr)
 
-        def optimizer(param):
-            return transformers.optimization.Adafactor(param, lr=lr, scale_parameter=False, relative_step=False)
-    else:
-
-        def optimizer(param):
-            return torch.optim.AdamW(param, lr=lr)
+    def optimizer(params):
+        return optimizer_instance
 
     for epoch in range(1, args.epoch + 1):
         logger.info(f"Epoch {epoch}/{args.epoch}")
+
         if args.pmd:
             program.train(train_set, c_warmup_iters=0, train_epoch_num=1, Optim=optimizer, device=cur_device)
         else:
             program.train(train_set, train_epoch_num=1, Optim=optimizer, device=cur_device)
 
-        train_loss = get_avg_loss(program, train_set, cur_device, "train")
+        if program.model.metric:
+            train_metrics = program.model.metric["argmax"].value()["answer_class"]
+            train_f1 = []
+            for label in LABEL_STRINGS:
+                key = f"{label} F1"
+                metric = train_metrics[key]
+                train_f1.append(metric)
+                logger.info(f"{label} F1: {metric}")
+                if args.use_mlflow:
+                    mlflow.log_metric(f"Train F1 {label}", metric)
+            train_macro_f1 = sum(train_f1) / len(train_f1)
+            logger.info(f"Train Macro F1: {train_macro_f1}")
+            if args.use_mlflow:
+                    mlflow.log_metric("Train Macro F1", train_macro_f1)
+
+        train_loss = program.model.loss.value()["answer_class"]
         eval_loss = get_avg_loss(program, eval_set, cur_device, "eval")
-        f1, accuracy, constraint_rate, _ = eval(program=program, test_set=eval_set, cur_device=cur_device, args=args)
+        f1, accuracy, constraint_rate, f1_per_class = eval(
+            program=program, test_set=eval_set, cur_device=cur_device, args=args
+        )
 
         logger.info(f"Epoch: {epoch}")
         logger.info(f"Train Loss: {train_loss}")
         logger.info(f"Eval Loss: {eval_loss}")
         logger.info(f"Dev Accuracy: {accuracy}%")
         logger.info(f"Dev F1: {f1}%")
+        for label, score in zip(LABEL_STRINGS, f1_per_class):
+            logger.info(f"Dev F1 {label}: {score}%")
+            if args.use_mlflow:
+                mlflow.log_metric(f"Dev F1 {label}", score)
         if args.constraints:
             logger.info(f"Dev Constraint Rate: {constraint_rate}")
         if args.use_mlflow:
@@ -181,7 +201,7 @@ def train(
                 + str(args.lr)
                 + program_addition
                 + "_model_"
-                + "modernbert"
+                + args.model
             )
             model_path = os.path.join(args.results_path, new_file)
             program.save(model_path)
@@ -230,7 +250,7 @@ def main(args: Any) -> None:
     torch.manual_seed(SEED)
 
     if args.use_mlflow:
-        run_name = f"modernbert_{datetime.now().strftime('%Y-%d-%m_%H:%M:%S')}"
+        run_name = f"{args.model}_{datetime.now().strftime('%Y-%d-%m_%H:%M:%S')}"
         logger.info(f"Starting run with id {run_name}")
         mlflow.set_experiment("Temporal_FR")
         mlflow.start_run(run_name=run_name)
@@ -241,6 +261,30 @@ def main(args: Any) -> None:
     else:
         cur_device = "cuda:" + str(cuda_number) if torch.cuda.is_available() else "cpu"
 
+    logger.info("Loading training data...")
+    train_file = "tb_dense_train.json"
+    training_set = TemporalReader.from_file(
+        file_path=os.path.join(args.data_path, train_file), question_type="FR", batch_size=args.batch_size
+    )
+
+    if args.use_class_weights:
+        train_labels = get_train_labels(training_set)
+        class_weights = compute_class_weight("balanced", classes=np.unique(train_labels), y=train_labels)
+        logger.info(f"Calculated class weigths {class_weights}")
+        class_weights = torch.FloatTensor(class_weights).to(cur_device)
+
+    logger.info("Loading development data...")
+    eval_file = "tb_dense_dev.json"
+    eval_set = TemporalReader.from_file(
+        file_path=os.path.join(args.data_path, eval_file), question_type="FR", batch_size=args.batch_size
+    )
+
+    logger.info("Loading test data...")
+    test_file = "tb_dense_test.json"
+    test_set = TemporalReader.from_file(
+        file_path=os.path.join(args.data_path, test_file), question_type="FR", batch_size=args.batch_size
+    )
+
     program = program_declaration_tb_dense_fr(
         cur_device,
         pmd=args.pmd,
@@ -249,21 +293,7 @@ def main(args: Any) -> None:
         sampleSize=args.sampling_size,
         dropout=args.dropout,
         constraints=args.constraints,
-    )
-
-    train_file = "tb_dense_train.json"
-    training_set = TemporalReader.from_file(
-        file_path=os.path.join(args.data_path, train_file), question_type="FR", batch_size=args.batch_size
-    )
-
-    test_file = "tb_dense_test.json"
-    test_set = TemporalReader.from_file(
-        file_path=os.path.join(args.data_path, test_file), question_type="FR", batch_size=args.batch_size
-    )
-
-    eval_file = "tb_dense_dev.json"
-    eval_set = TemporalReader.from_file(
-        file_path=os.path.join(args.data_path, eval_file), question_type="FR", batch_size=args.batch_size
+        class_weights=class_weights if args.use_class_weights else None,
     )
 
     program_name = "PMD" if args.pmd else "Sampling" if args.sampling else "Base"

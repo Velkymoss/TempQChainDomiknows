@@ -26,6 +26,7 @@ def create_tb_dense(
 @app.command()
 def temporal_fr(
     # Training parameters
+    model: str = typer.Option("bert", help="Model used"),
     epoch: int = typer.Option(1, help="Number of training epochs"),
     lr: float = typer.Option(1e-5, help="Learning rate"),
     batch_size: int = typer.Option(4, help="Batch size for training"),
@@ -35,6 +36,7 @@ def temporal_fr(
     # Model parameters
     dropout: bool = typer.Option(False, help="Enable dropout"),
     constraints: bool = typer.Option(False, help="Enable constraints"),
+    use_class_weights: bool = typer.Option(False, help="Enable class weights for training"),
     # Training method parameters
     pmd: bool = typer.Option(False, help="Use Primal Dual method"),
     beta: float = typer.Option(0.5, help="Beta parameter for PMD"),
@@ -58,6 +60,7 @@ def temporal_fr(
     import tempQchain.temporal_FR as temporal_FR
 
     args = argparse.Namespace(
+        model=model,
         epoch=epoch,
         lr=lr,
         cuda=cuda,
@@ -79,6 +82,7 @@ def temporal_fr(
         save_file=save_file,
         optim=optim,
         use_mlflow=use_mlflow,
+        use_class_weights=use_class_weights,
     )
     temporal_FR.main(args)
 
@@ -97,6 +101,7 @@ def temporal_yn(
     model: str = typer.Option("bert", help="Model type to use"),
     dropout: bool = typer.Option(False, help="Enable dropout"),
     constraints: bool = typer.Option(False, help="Enable constraints"),
+    use_class_weights: bool = typer.Option(False, help="Enable class weights for training"),
     # Training method parameters
     pmd: bool = typer.Option(False, help="Use Primal Dual method"),
     beta: float = typer.Option(0.5, help="Beta parameter for PMD"),
@@ -141,6 +146,7 @@ def temporal_yn(
         model=model,
         check_condition=check_condition,
         use_mlflow=use_mlflow,
+        use_class_weights=use_class_weights,
     )
     temporal_YN.main(args)
 
