@@ -1,11 +1,8 @@
 import torch
 from torch import nn
 from transformers import (
-    AutoTokenizer,
     BertModel,
-    BertPreTrainedModel,
     BertTokenizer,
-    ModernBertModel,
 )
 
 
@@ -22,112 +19,65 @@ class BERTTokenizer:
         return input_ids, attention_mask
 
 
-class ModernBERTTokenizer:
-    def __init__(self, special_tokens: list[str] = None):
-        self.tokenizer = AutoTokenizer.from_pretrained("answerdotai/ModernBERT-base")
-        special_tokens = ["<e1>", "</e1>", "<e2>", "</e2>"]
-        self.tokenizer.add_tokens(special_tokens)
-
-    def __call__(self, _, question, story):
-        encoded_input = self.tokenizer(
-            question,
-            story,
-            padding="max_length",
-            truncation=True,
-            max_length=5000,
-            return_tensors="pt"
-        )
-
-        input_ids = encoded_input["input_ids"]
-
-        return input_ids
-
-
-class ModernBert(nn.Module):
-    def __init__(self, model_name="answerdotai/ModernBERT-base", num_classes=6, drp=False, device="cpu", tokenizer=None):
-        super().__init__()
-
-        self.bert = ModernBertModel.from_pretrained(model_name)
-        if tokenizer is not None:
-            self.bert.resize_token_embeddings(len(tokenizer))
-
-        self.hidden_size = self.bert.config.hidden_size
-
-        dropout_prob = 0.0 if drp else getattr(self.bert.config, "classifier_dropout", 0.0)
-        self.dropout = nn.Dropout(dropout_prob)
-
-        self.num_classes = num_classes
-        self.classifier = nn.Linear(self.hidden_size, self.num_classes)
-        self.device = device
-        self.to(device)
-
-    def forward(self, input_ids):
-        outputs = self.bert(
-            input_ids=input_ids,
-        )
-        pooled_output = outputs.last_hidden_state[:, 0, :]
-        pooled_output = self.dropout(pooled_output)
-
-        logits = self.classifier(pooled_output)
-        return logits
-
-
 class Bert(nn.Module):
     def __init__(self, num_classes=6, drp=False, device="cpu", tokenizer=None):
         super().__init__()
 
+        self.device = device
         self.bert = BertModel.from_pretrained("bert-base-uncased")
 
         if tokenizer is not None:
             self.bert.resize_token_embeddings(len(tokenizer), mean_resizing=True)
+            self.register_buffer("e1_start_id", torch.tensor(tokenizer.convert_tokens_to_ids("<e1>")))
+            self.register_buffer("e1_end_id", torch.tensor(tokenizer.convert_tokens_to_ids("</e1>")))
+            self.register_buffer("e2_start_id", torch.tensor(tokenizer.convert_tokens_to_ids("<e2>")))
+            self.register_buffer("e2_end_id", torch.tensor(tokenizer.convert_tokens_to_ids("</e2>")))
 
         dropout_prob = 0.0 if drp else self.bert.config.hidden_dropout_prob
         self.dropout = nn.Dropout(dropout_prob)
         self.hidden_size = self.bert.config.hidden_size
         self.num_classes = num_classes
-        self.classifier = nn.Linear(self.hidden_size, self.num_classes)
-        
+
+        self.mlp1 = nn.Sequential(
+            nn.Linear(self.hidden_size * 4, self.hidden_size), nn.GELU(), nn.Dropout(dropout_prob)
+        )
+
+        self.mlp2 = nn.Sequential(
+            nn.Linear(self.hidden_size, self.hidden_size // 2),
+            nn.GELU(),
+            nn.Dropout(dropout_prob),
+            nn.Linear(self.hidden_size // 2, num_classes),
+        )
+
         self.to(device)
 
     def forward(self, input_ids, attention_mask):
-        outputs = self.bert(input_ids = input_ids, attention_mask=attention_mask)
-        pooled_output = outputs.pooler_output
-        pooled_output = self.dropout(pooled_output)
-        logits = self.classifier(pooled_output)
-        return logits
+        outputs = self.bert(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+        )
+        hidden_states = outputs.last_hidden_state
+        batch_size = hidden_states.size(0)
 
+        e1_start_mask = input_ids == self.e1_start_id
+        e1_end_mask = input_ids == self.e1_end_id
+        e2_start_mask = input_ids == self.e2_start_id
+        e2_end_mask = input_ids == self.e2_end_id
 
-class ClassifyLayer(nn.Module):
-    def __init__(self, hidden_size, device="cpu", drp=False):
-        super().__init__()
+        e1_start_pos = e1_start_mask.long().argmax(dim=1)
+        e1_end_pos = e1_end_mask.long().argmax(dim=1)
+        e2_start_pos = e2_start_mask.long().argmax(dim=1)
+        e2_end_pos = e2_end_mask.long().argmax(dim=1)
 
-        self.num_classes = 2
-        self.classifier = nn.Linear(hidden_size, self.num_classes)
-        self.sigmoid = nn.Sigmoid()
-        self.softmax = nn.Softmax()
+        batch_indices = torch.arange(batch_size, device=self.device)
 
-    def forward(self, pooled_output):
-        output = self.classifier(pooled_output)
+        e1_start_emb = hidden_states[batch_indices, e1_start_pos]
+        e1_end_emb = hidden_states[batch_indices, e1_end_pos]
+        e2_start_emb = hidden_states[batch_indices, e2_start_pos]
+        e2_end_emb = hidden_states[batch_indices, e2_end_pos]
 
-        return output
-
-
-class ClassifyLayer2(nn.Module):
-    def __init__(self, hidden_size, hidden_layer=1, device="cpu", drp=False):
-        super().__init__()
-
-        self.num_classes = 2
-        layer_parameters = [hidden_size] + [256 for i in range(hidden_layer - 1)] + [self.num_classes]
-
-        all_layer = []
-        for i in range(len(layer_parameters) - 1):
-            all_layer.append(nn.Linear(layer_parameters[i], layer_parameters[i + 1]))
-        self.classifier = nn.Sequential(*all_layer)
-        self.sigmoid = nn.Sigmoid()
-        self.softmax = nn.Softmax()
-
-    def forward(self, pooled_output):
-        logits = self.classifier(pooled_output)
-        # logits = self.sigmoid(logits)
+        entity_embed = torch.cat([e1_start_emb, e1_end_emb, e2_start_emb, e2_end_emb], dim=-1)
+        h_e1e2 = self.mlp1(entity_embed)
+        logits = self.mlp2(h_e1e2)
 
         return logits
