@@ -57,7 +57,7 @@ def temporal_fr(
 ):
     import argparse
 
-    import tempQchain.temporal_FR as temporal_FR
+    import tempQchain.temporal as temporal
 
     args = argparse.Namespace(
         model=model,
@@ -84,7 +84,7 @@ def temporal_fr(
         use_mlflow=use_mlflow,
         use_class_weights=use_class_weights,
     )
-    temporal_FR.main(args)
+    temporal.main(args)
 
 
 @app.command()
