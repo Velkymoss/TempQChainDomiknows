@@ -59,8 +59,13 @@ def train(
 
     if test_set:
         logger.info("Final evaluation on test set")
-        loss, metric, output = program.test(test_set)
-        logger.info(program.model.metric)
+        program.test(test_set)
+        if program.model.metric:
+            test_metrics = program.model.metric["argmax"].value()["answer_class"]
+            logger.info(f"Test Metrics: {test_metrics}")
+        if program.model.loss:
+            test_loss = program.model.loss.value()["answer_class"]
+            logger.info(f"Test Loss: {test_loss}")
 
 
 def main(args: Any) -> None:
