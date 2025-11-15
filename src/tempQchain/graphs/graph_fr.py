@@ -45,7 +45,7 @@ with Graph("temporal_QA_rule") as graph:
         answer_class.includes,
         answer_class.is_included,
         answer_class.simultaneous,
-        answer_class.vague,
+        # answer_class.vague,
     ]
     for rel in transitive_1:
         ifL(
@@ -70,135 +70,135 @@ with Graph("temporal_QA_rule") as graph:
         )
 
     ############################ before ##################################################
-    # A<B & B includes C => [A<C, A includes C, A vague C]
-    ifL(
-        andL(
-            transitive("t"),
-            answer_class.before(path=("t", tran_quest1)),
-            answer_class.includes(path=("t", tran_quest2)),
-        ),
-        orL(
-            answer_class.before(path=("t", tran_quest3)),
-            answer_class.includes(path=("t", tran_quest3)),
-            answer_class.vague(path=("t", tran_quest3)),
-        ),
-    )
+    # # A<B & B includes C => [A<C, A includes C, A vague C]
+    # ifL(
+    #     andL(
+    #         transitive("t"),
+    #         answer_class.before(path=("t", tran_quest1)),
+    #         answer_class.includes(path=("t", tran_quest2)),
+    #     ),
+    #     orL(
+    #         answer_class.before(path=("t", tran_quest3)),
+    #         answer_class.includes(path=("t", tran_quest3)),
+    #         answer_class.vague(path=("t", tran_quest3)),
+    #     ),
+    # )
 
-    # A<B & B is_included C -> [before, is_included, vague]
-    ifL(
-        andL(
-            transitive("t"),
-            answer_class.before(path=("t", tran_quest1)),
-            answer_class.is_included(path=("t", tran_quest2)),
-        ),
-        orL(
-            answer_class.before(path=("t", tran_quest3)),
-            answer_class.is_included(path=("t", tran_quest3)),
-            answer_class.vague(path=("t", tran_quest3)),
-        ),
-    )
+    # # A<B & B is_included C -> [before, is_included, vague]
+    # ifL(
+    #     andL(
+    #         transitive("t"),
+    #         answer_class.before(path=("t", tran_quest1)),
+    #         answer_class.is_included(path=("t", tran_quest2)),
+    #     ),
+    #     orL(
+    #         answer_class.before(path=("t", tran_quest3)),
+    #         answer_class.is_included(path=("t", tran_quest3)),
+    #         answer_class.vague(path=("t", tran_quest3)),
+    #     ),
+    # )
 
     ########################### after ####################################################
-    # A>B & B includes C => [after, includes, vague]
-    ifL(
-        andL(
-            transitive("t"),
-            answer_class.after(path=("t", tran_quest1)),
-            answer_class.includes(path=("t", tran_quest2)),
-        ),
-        orL(
-            answer_class.after(path=("t", tran_quest3)),
-            answer_class.includes(path=("t", tran_quest3)),
-            answer_class.vague(path=("t", tran_quest3)),
-        ),
-    )
+    # # A>B & B includes C => [after, includes, vague]
+    # ifL(
+    #     andL(
+    #         transitive("t"),
+    #         answer_class.after(path=("t", tran_quest1)),
+    #         answer_class.includes(path=("t", tran_quest2)),
+    #     ),
+    #     orL(
+    #         answer_class.after(path=("t", tran_quest3)),
+    #         answer_class.includes(path=("t", tran_quest3)),
+    #         answer_class.vague(path=("t", tran_quest3)),
+    #     ),
+    # )
 
-    # A>B & B is_included C -> [after, is_included, vague]
-    ifL(
-        andL(
-            transitive("t"),
-            answer_class.after(path=("t", tran_quest1)),
-            answer_class.is_included(path=("t", tran_quest2)),
-        ),
-        orL(
-            answer_class.after(path=("t", tran_quest3)),
-            answer_class.is_included(path=("t", tran_quest3)),
-            answer_class.vague(path=("t", tran_quest3)),
-        ),
-    )
+    # # A>B & B is_included C -> [after, is_included, vague]
+    # ifL(
+    #     andL(
+    #         transitive("t"),
+    #         answer_class.after(path=("t", tran_quest1)),
+    #         answer_class.is_included(path=("t", tran_quest2)),
+    #     ),
+    #     orL(
+    #         answer_class.after(path=("t", tran_quest3)),
+    #         answer_class.is_included(path=("t", tran_quest3)),
+    #         answer_class.vague(path=("t", tran_quest3)),
+    #     ),
+    # )
 
     ######################## is included ##################################################
-    # A is_included B & B<C => [before, is_included, vague]
-    ifL(
-        andL(
-            transitive("t"),
-            answer_class.is_included(path=("t", tran_quest1)),
-            answer_class.before(path=("t", tran_quest2)),
-        ),
-        orL(
-            answer_class.before(path=("t", tran_quest3)),
-            answer_class.is_included(path=("t", tran_quest3)),
-            answer_class.vague(path=("t", tran_quest3)),
-        ),
-    )
+    # # A is_included B & B<C => [before, is_included, vague]
+    # ifL(
+    #     andL(
+    #         transitive("t"),
+    #         answer_class.is_included(path=("t", tran_quest1)),
+    #         answer_class.before(path=("t", tran_quest2)),
+    #     ),
+    #     orL(
+    #         answer_class.before(path=("t", tran_quest3)),
+    #         answer_class.is_included(path=("t", tran_quest3)),
+    #         answer_class.vague(path=("t", tran_quest3)),
+    #     ),
+    # )
 
-    # A is_included B & B>C => [after, is_included, vague]
-    ifL(
-        andL(
-            transitive("t"),
-            answer_class.is_included(path=("t", tran_quest1)),
-            answer_class.after(path=("t", tran_quest2)),
-        ),
-        orL(
-            answer_class.after(path=("t", tran_quest3)),
-            answer_class.is_included(path=("t", tran_quest3)),
-            answer_class.vague(path=("t", tran_quest3)),
-        ),
-    )
+    # # A is_included B & B>C => [after, is_included, vague]
+    # ifL(
+    #     andL(
+    #         transitive("t"),
+    #         answer_class.is_included(path=("t", tran_quest1)),
+    #         answer_class.after(path=("t", tran_quest2)),
+    #     ),
+    #     orL(
+    #         answer_class.after(path=("t", tran_quest3)),
+    #         answer_class.is_included(path=("t", tran_quest3)),
+    #         answer_class.vague(path=("t", tran_quest3)),
+    #     ),
+    # )
 
     ############################ includes ###########################################################
-    # A includes B & B < C -> [before, includes, vague]
-    ifL(
-        andL(
-            transitive("t"),
-            answer_class.includes(path=("t", tran_quest1)),
-            answer_class.before(path=("t", tran_quest2)),
-        ),
-        orL(
-            answer_class.before(path=("t", tran_quest3)),
-            answer_class.includes(path=("t", tran_quest3)),
-            answer_class.vague(path=("t", tran_quest3)),
-        ),
-    )
+    # # A includes B & B < C -> [before, includes, vague]
+    # ifL(
+    #     andL(
+    #         transitive("t"),
+    #         answer_class.includes(path=("t", tran_quest1)),
+    #         answer_class.before(path=("t", tran_quest2)),
+    #     ),
+    #     orL(
+    #         answer_class.before(path=("t", tran_quest3)),
+    #         answer_class.includes(path=("t", tran_quest3)),
+    #         answer_class.vague(path=("t", tran_quest3)),
+    #     ),
+    # )
 
-    # A includes B & B > C -> [after, includes, vague]
-    ifL(
-        andL(
-            transitive("t"),
-            answer_class.includes(path=("t", tran_quest1)),
-            answer_class.after(path=("t", tran_quest2)),
-        ),
-        orL(
-            answer_class.after(path=("t", tran_quest3)),
-            answer_class.includes(path=("t", tran_quest3)),
-            answer_class.vague(path=("t", tran_quest3)),
-        ),
-    )
+    # # A includes B & B > C -> [after, includes, vague]
+    # ifL(
+    #     andL(
+    #         transitive("t"),
+    #         answer_class.includes(path=("t", tran_quest1)),
+    #         answer_class.after(path=("t", tran_quest2)),
+    #     ),
+    #     orL(
+    #         answer_class.after(path=("t", tran_quest3)),
+    #         answer_class.includes(path=("t", tran_quest3)),
+    #         answer_class.vague(path=("t", tran_quest3)),
+    #     ),
+    # )
 
-    # A includes B & B is_included C -> [includes, is_included, simultaneous, vague]
-    ifL(
-        andL(
-            transitive("t"),
-            answer_class.includes(path=("t", tran_quest1)),
-            answer_class.is_included(path=("t", tran_quest2)),
-        ),
-        orL(
-            answer_class.includes(path=("t", tran_quest3)),
-            answer_class.is_included(path=("t", tran_quest3)),
-            answer_class.simultaneous(path=("t", tran_quest3)),
-            answer_class.vague(path=("t", tran_quest3)),
-        ),
-    )
+    # # A includes B & B is_included C -> [includes, is_included, simultaneous, vague]
+    # ifL(
+    #     andL(
+    #         transitive("t"),
+    #         answer_class.includes(path=("t", tran_quest1)),
+    #         answer_class.is_included(path=("t", tran_quest2)),
+    #     ),
+    #     orL(
+    #         answer_class.includes(path=("t", tran_quest3)),
+    #         answer_class.is_included(path=("t", tran_quest3)),
+    #         answer_class.simultaneous(path=("t", tran_quest3)),
+    #         answer_class.vague(path=("t", tran_quest3)),
+    #     ),
+    # )
 
     #######################simultaneous#####################################
     # A = B & B rel C -> A rel C
