@@ -279,7 +279,7 @@ class LearningBasedProgram():
             self.to(device)
         if Optim is not None and list(self.model.parameters()):
             self.opt = Optim(self.model.parameters())
-
+       
         history = {
         'train_loss': [],
         'val_loss': [],
@@ -335,13 +335,6 @@ class LearningBasedProgram():
                     best_f1 = val_macro_f1
                 
                     if model_dir and best_model_name:
-                        os.makedirs(model_dir, exist_ok=True)
-                        model_path = os.path.join(model_dir, best_model_name)
-                        self.save(model_path)
-                        self.logger.info(f"New best model saved to: {model_path}")
-                    else:
-                        model_dir = "models/"
-                        best_model_name = "best_model"
                         os.makedirs(model_dir, exist_ok=True)
                         model_path = os.path.join(model_dir, best_model_name)
                         self.save(model_path)
@@ -404,7 +397,7 @@ class LearningBasedProgram():
         if test_set is not None:
             results['test_loss'] =  test_loss
             results['test_f1_macro'] = test_macro_f1
-            results['test_f1_per_class'] = test_f1_dict,
+            results['test_f1_per_class'] = test_f1_dict
 
         # Reset epoch after everything
         self.epoch = None

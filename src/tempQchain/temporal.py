@@ -105,32 +105,36 @@ def main(args: Any) -> None:
         valid_set=eval_set,
         test_set=test_set,
         train_epoch_num=args.epoch,
-        Optim=lambda param: torch.optim.AdamW(param, lr=args.lr, weigh_decay=args.weight_decay),
+        Optim=lambda param: torch.optim.AdamW(param, lr=args.lr, weight_decay=args.weight_decay),
         patience=args.patience,
         device=cur_device,
         model_dir=args.best_model_dir,
-        file_name=args.best_model_name,
+        best_model_name=args.best_model_name,
     )
 
     history = results["history"]
-    for epoch, (train_loss, val_loss, train_f1, val_f1) in enumerate(
-        zip(history["train_loss"], history["val_loss"], history["train_f1"], history["val_f1"]), start=1
-    ):
-        mlflow.log_metric("train_loss", train_loss, step=epoch)
-        mlflow.log_metric("val_loss", val_loss, step=epoch)
-        mlflow.log_metric("train_f1", train_f1, step=epoch)
-        mlflow.log_metric("val_f1", val_f1, step=epoch)
+    if args.use_mlflow:
+        for epoch, (train_loss, val_loss, train_f1, val_f1) in enumerate(
+            zip(history["train_loss"], history["val_loss"], history["train_f1"], history["val_f1"]), start=1
+        ):
+            mlflow.log_metric("train_loss", train_loss, step=epoch)
+            mlflow.log_metric("val_loss", val_loss, step=epoch)
+            mlflow.log_metric("train_f1", train_f1, step=epoch)
+            mlflow.log_metric("val_f1", val_f1, step=epoch)
 
-    mlflow.log_metric("best_epoch", results["best_epoch"])
-    mlflow.log_metric("best_val_f1", results["best_val_f1"])
+        mlflow.log_metric("best_epoch", results["best_epoch"])
+        mlflow.log_metric("best_val_f1", results["best_val_f1"])
 
-    if "test_loss" in results:
-        mlflow.log_metric("test_loss", results["test_loss"])
-    if "test_f1_macro" in results:
-        mlflow.log_metric("test_f1_macro", results["test_f1_macro"])
-    if "test_f1_per_class" in results:
-        for class_label, f1_score in results["test_f1_per_class"].items():
-            mlflow.log_metric(f"test_f1_{class_label}", f1_score)
+        best_model_path = os.path.join(args.best_model_dir, args.best_model_name)
+        mlflow.log_artifact(best_model_path)
+
+        if "test_loss" in results:
+            mlflow.log_metric("test_loss", results["test_loss"])
+        if "test_f1_macro" in results:
+            mlflow.log_metric("test_f1_macro", results["test_f1_macro"])
+        if "test_f1_per_class" in results:
+            for class_label, f1_score in results["test_f1_per_class"].items():
+                mlflow.log_metric(f"test_f1_{class_label}", f1_score)
 
     if args.use_mlflow:
         mlflow.end_run()
