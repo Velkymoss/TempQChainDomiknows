@@ -125,18 +125,13 @@ def train(
             }
         )
 
-    optimizer_instance = torch.optim.AdamW(program.model.parameters(), lr=args.lr)
-
-    def optimizer(params):
-        return optimizer_instance
-
     for epoch in range(1, args.epoch + 1):
         logger.info(f"Epoch {epoch}/{args.epoch}")
 
         if args.pmd:
-            program.train(train_set, c_warmup_iters=0, train_epoch_num=1, Optim=optimizer, device=cur_device)
+            program.train(train_set, train_epoch_num=1, Optim=lambda param: torch.optim.AdamW(param, lr=args.lr), device=cur_device)
         else:
-            program.train(train_set, train_epoch_num=1, Optim=optimizer, device=cur_device)
+            program.train(train_set, train_epoch_num=1, Optim=lambda param: torch.optim.AdamW(param, lr=args.lr), device=cur_device)
 
         if program.model.metric:
             train_metrics = program.model.metric["argmax"].value()["answer_class"]
