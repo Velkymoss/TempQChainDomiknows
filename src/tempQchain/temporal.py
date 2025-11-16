@@ -1,10 +1,11 @@
 import os
 import random
+from datetime import datetime
 from typing import Any
 
+import mlflow
 import numpy as np
 import torch
-from domiknows.program.lossprogram import LearningBasedProgram
 from sklearn.utils.class_weight import compute_class_weight
 
 from tempQchain.logger import get_logger
@@ -16,19 +17,13 @@ from tempQchain.utils import get_train_labels
 
 logger = get_logger(__name__)
 
-LABEL_STRINGS = ["after", "before", "includes", "is_included", "simultaneous", "vague"]
 
+def main(args: Any) -> None:
+    SEED = 382
+    np.random.seed(SEED)
+    random.seed(SEED)
+    torch.manual_seed(SEED)
 
-def train(
-    program: LearningBasedProgram,
-    train_set: list[dict[str, str]],
-    eval_set: list[dict[str, str]],
-    test_set: list[dict[str, str]] | None,
-    cur_device: str | None,
-    lr: float,
-    program_name: str = "DomiKnow",
-    args: Any = None,
-) -> None:
     logger.info("Starting FR training...")
     logger.info(f"Model: {args.model}")
     logger.info("Using Hyperparameters:")
@@ -43,37 +38,26 @@ def train(
     if args.sampling:
         logger.info(f"Using Sampling Loss with Size: {args.sampling_size}")
 
-    program.train(
-        training_set=train_set,
-        valid_set=eval_set,
-        train_epoch_num=args.epoch,
-        Optim=lambda param: torch.optim.AdamW(param, lr=args.lr),
-        patience=3,
-        device=cur_device,
-    )
+    if args.use_mlflow:
+        run_name = f"{args.model}_{datetime.now().strftime('%Y-%d-%m_%H:%M:%S')}"
+        logger.info(f"Starting run with id {run_name}")
+        mlflow.set_experiment("Temporal_FR")
+        mlflow.start_run(run_name=run_name)
 
-    if program.model.metric:
-        metrics = program.model.metric["argmax"].value()["answer_class"]
-        logger.info(metrics)
-        loss = program.model.loss.value()["answer_class"]
-        logger.info(loss)
-
-    if test_set:
-        logger.info("Final evaluation on test set")
-        program.test(test_set)
-        if program.model.metric:
-            test_metrics = program.model.metric["argmax"].value()["answer_class"]
-            logger.info(f"Test Metrics: {test_metrics}")
-        if program.model.loss:
-            test_loss = program.model.loss.value()["answer_class"]
-            logger.info(f"Test Loss: {test_loss}")
-
-
-def main(args: Any) -> None:
-    SEED = 382
-    np.random.seed(SEED)
-    random.seed(SEED)
-    torch.manual_seed(SEED)
+        mlflow.log_param("model", args.model)
+        mlflow.log_param("learning_rate", args.lr)
+        mlflow.log_param("batch_size", args.batch_size)
+        mlflow.log_param("epochs", args.epoch)
+        mlflow.log_param("use_constraints", args.constraints)
+        mlflow.log_param("use_dropout", args.dropout)
+        mlflow.log_param("use_pmd", args.pmd)
+        if args.pmd:
+            mlflow.log_param("pmd_beta", args.beta)
+        mlflow.log_param("use_sampling", args.sampling)
+        if args.sampling:
+            mlflow.log_param("sampling_size", args.sampling_size)
+        mlflow.log_param("use_class_weights", args.use_class_weights)
+        mlflow.log_param("cuda", args.cuda)
 
     cuda_number = args.cuda
     if cuda_number == -1:
@@ -116,15 +100,37 @@ def main(args: Any) -> None:
         class_weights=class_weights if args.use_class_weights else None,
     )
 
-    program_name = "PMD" if args.pmd else "Sampling" if args.sampling else "Base"
-
-    train(
-        program=program,
-        train_set=training_set,
-        eval_set=eval_set,
-        cur_device=cur_device,
-        lr=args.lr,
-        program_name=program_name,
+    results = program.train(
+        training_set=training_set,
+        valid_set=eval_set,
         test_set=test_set,
-        args=args,
+        train_epoch_num=args.epoch,
+        Optim=lambda param: torch.optim.AdamW(param, lr=args.lr, weigh_decay=args.weight_decay),
+        patience=args.patience,
+        device=cur_device,
+        model_dir=args.best_model_dir,
+        file_name=args.best_model_name,
     )
+
+    history = results["history"]
+    for epoch, (train_loss, val_loss, train_f1, val_f1) in enumerate(
+        zip(history["train_loss"], history["val_loss"], history["train_f1"], history["val_f1"]), start=1
+    ):
+        mlflow.log_metric("train_loss", train_loss, step=epoch)
+        mlflow.log_metric("val_loss", val_loss, step=epoch)
+        mlflow.log_metric("train_f1", train_f1, step=epoch)
+        mlflow.log_metric("val_f1", val_f1, step=epoch)
+
+    mlflow.log_metric("best_epoch", results["best_epoch"])
+    mlflow.log_metric("best_val_f1", results["best_val_f1"])
+
+    if "test_loss" in results:
+        mlflow.log_metric("test_loss", results["test_loss"])
+    if "test_f1_macro" in results:
+        mlflow.log_metric("test_f1_macro", results["test_f1_macro"])
+    if "test_f1_per_class" in results:
+        for class_label, f1_score in results["test_f1_per_class"].items():
+            mlflow.log_metric(f"test_f1_{class_label}", f1_score)
+
+    if args.use_mlflow:
+        mlflow.end_run()

@@ -29,10 +29,11 @@ def temporal_fr(
     model: str = typer.Option("bert", help="Model used"),
     epoch: int = typer.Option(1, help="Number of training epochs"),
     lr: float = typer.Option(1e-5, help="Learning rate"),
+    weight_decay: float = typer.Option(1e-3, help="Weight decay for AdamW"),
     batch_size: int = typer.Option(4, help="Batch size for training"),
+    patience: int = typer.Option(3, help="Patience for early stopping"),
     # Data parameters
     data_path: str = typer.Option("data/", help="Path to the data folder"),
-    results_path: str = typer.Option("models/", help="Path to save models and predictions"),
     # Model parameters
     dropout: bool = typer.Option(False, help="Enable dropout"),
     constraints: bool = typer.Option(False, help="Enable constraints"),
@@ -45,14 +46,9 @@ def temporal_fr(
     # Additional options
     text_rules: bool = typer.Option(False, help="Include rules as text"),
     cuda: int = typer.Option(0, help="CUDA device number (-1 for CPU)"),
-    optim: str = typer.Option("adamw", help="Optimizer type"),
     # Model loading/saving, experiment tracking
-    loaded: bool = typer.Option(False, help="Load and evaluate existing model"),
-    loaded_file: str = typer.Option("train_model", help="File name to load model from"),
-    loaded_train: bool = typer.Option(False, help="Load model and continue training"),
-    model_change: bool = typer.Option(False, help="Allow model architecture changes when loading"),
-    save: bool = typer.Option(False, help="Save the trained model"),
-    save_file: str = typer.Option("train_model", help="File name to save model"),
+    best_model_name: str = typer.Option("best_model", help="File name to save model"),
+    best_model_dir: str = typer.Option("models", help="File name to save model"),
     use_mlflow: bool = typer.Option(False, help="Use MLflow for experiment tracking"),
 ):
     import argparse
@@ -63,10 +59,10 @@ def temporal_fr(
         model=model,
         epoch=epoch,
         lr=lr,
+        weight_decay=weight_decay,
         cuda=cuda,
         batch_size=batch_size,
         data_path=data_path,
-        results_path=results_path,
         text_rules=text_rules,
         dropout=dropout,
         pmd=pmd,
@@ -74,15 +70,11 @@ def temporal_fr(
         sampling=sampling,
         sampling_size=sampling_size,
         constraints=constraints,
-        loaded=loaded,
-        loaded_file=loaded_file,
-        loaded_train=loaded_train,
-        model_change=model_change,
-        save=save,
-        save_file=save_file,
-        optim=optim,
+        best_model_name=best_model_name,
+        best_model_dir=best_model_dir,
         use_mlflow=use_mlflow,
         use_class_weights=use_class_weights,
+        patience=patience,
     )
     temporal.main(args)
 

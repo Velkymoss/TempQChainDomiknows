@@ -273,12 +273,20 @@ class LearningBasedProgram():
         test_every_epoch=False,
         Optim=None,
         model_dir=None,
-        file_name=None,
+        best_model_name=None,
         **kwargs):
         if device is not None:
             self.to(device)
         if Optim is not None and list(self.model.parameters()):
             self.opt = Optim(self.model.parameters())
+
+        history = {
+        'train_loss': [],
+        'val_loss': [],
+        'train_f1': [],
+        'val_f1': [],
+        }
+
         self.train_epoch_num = train_epoch_num
         self.epoch = 0
         best_f1=0
@@ -292,6 +300,7 @@ class LearningBasedProgram():
             self.call_epoch('Training', training_set, self.train_epoch, **kwargs)
             if self.model.loss:
                 train_loss = self.model.loss.value()["answer_class"]
+                history["train_loss"].append(train_loss)
                 self.logger.info(f'Training Loss: {train_loss:.6f}')
             if self.model.metric and "argmax" in self.model.metric:
                 train_metrics = self.model.metric["argmax"].value()["answer_class"]
@@ -301,12 +310,14 @@ class LearningBasedProgram():
                     self.logger.info(f'  {label}: {f1_score:.4f}')
                 train_f1_values = list(train_f1_dict.values())
                 train_macro_f1 = sum(train_f1_values) / len(train_f1_values) if train_f1_values else 0.0
+                history["train_f1"].append(train_macro_f1)
                 self.logger.info(f'Training Macro F1: {train_macro_f1:.4f}')
 
             if valid_set is not None:
                 self.call_epoch('Validation', valid_set, self.test_epoch, **kwargs)
                 if self.model.loss:
                     val_loss = self.model.loss.value()["answer_class"]
+                    history["val_loss"].append(val_loss)
                     self.logger.info(f'Validation Loss: {val_loss:.6f}')
                 if self.model.metric and "argmax" in self.model.metric:
                     val_metrics = self.model.metric["argmax"].value()["answer_class"]
@@ -316,22 +327,23 @@ class LearningBasedProgram():
                         self.logger.info(f'  {label}: {f1_score:.4f}')
                     val_f1_values = list(val_f1_dict.values())
                     val_macro_f1 = sum(val_f1_values) / len(val_f1_values) if val_f1_values else 0.0
+                    history["val_f1"].append(val_macro_f1)
                     self.logger.info(f'Validation Macro F1: {val_macro_f1:.4f}')
 
                 if val_macro_f1 >= best_f1:
                     best_epoch = self.epoch
                     best_f1 = val_macro_f1
                 
-                    if model_dir and file_name:
+                    if model_dir and best_model_name:
                         os.makedirs(model_dir, exist_ok=True)
-                        model_path = os.path.join(model_dir, file_name)
+                        model_path = os.path.join(model_dir, best_model_name)
                         self.save(model_path)
                         self.logger.info(f"New best model saved to: {model_path}")
                     else:
                         model_dir = "models/"
-                        file_name = "last_run_best_model"
+                        best_model_name = "best_model"
                         os.makedirs(model_dir, exist_ok=True)
-                        model_path = os.path.join(model_dir, file_name)
+                        model_path = os.path.join(model_dir, best_model_name)
                         self.save(model_path)
                         self.logger.info(f"New best model saved to: {model_path}")
 
@@ -383,9 +395,22 @@ class LearningBasedProgram():
             
             self.logger.info('=' * 80)
 
+        results = {
+        'history': history,
+        'best_epoch': best_epoch,
+        'best_val_f1': best_f1
+        }
+
+        if test_set is not None:
+            results['test_loss'] =  test_loss
+            results['test_f1_macro'] = test_macro_f1
+            results['test_f1_per_class'] = test_f1_dict,
+
         # Reset epoch after everything
         self.epoch = None
         self.stop = None
+
+        return results
 
     def train_epoch(self, dataset):
         self.model.mode(Mode.TRAIN)
