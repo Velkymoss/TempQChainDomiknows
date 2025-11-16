@@ -28,6 +28,9 @@ def main(args: Any) -> None:
     logger.info(f"Model: {args.model}")
     logger.info("Using Hyperparameters:")
     logger.info(f"Learning Rate: {args.lr}")
+    logger.info(f"Weight Decay: {args.weight_decay}")
+    logger.info(f"Epochs: {args.epoch}")
+    logger.info(f"Patience: {args.patience}")
     logger.info(f"Batch Size: {args.batch_size}")
     if args.constraints:
         logger.info("Using Constraints")
@@ -46,8 +49,10 @@ def main(args: Any) -> None:
 
         mlflow.log_param("model", args.model)
         mlflow.log_param("learning_rate", args.lr)
+        mlflow.log_param("weight_decay", args.weight_decay)
         mlflow.log_param("batch_size", args.batch_size)
         mlflow.log_param("epochs", args.epoch)
+        mlflow.log_param("patience", args.patience)
         mlflow.log_param("use_constraints", args.constraints)
         mlflow.log_param("use_dropout", args.dropout)
         mlflow.log_param("use_pmd", args.pmd)
