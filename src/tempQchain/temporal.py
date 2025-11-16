@@ -48,6 +48,7 @@ def train(
         valid_set=eval_set,
         train_epoch_num=args.epoch,
         Optim=lambda param: torch.optim.AdamW(param, lr=args.lr),
+        patience=3,
         device=cur_device,
     )
 
