@@ -125,6 +125,7 @@ def program_declaration_tb_dense_fr(
             beta=beta,
             metric={"ILP": PRF1Tracker(DatanodeCMMetric()), "argmax": PRF1Tracker(DatanodeCMMetric("local/argmax"))},
             device=device,
+            logger=logger,
         )
     elif sampling:
         if class_weights is not None:
