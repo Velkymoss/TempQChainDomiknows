@@ -38,27 +38,55 @@ trans_rules = {  # rule 1
     # ("vague", "includes"): ["vague"],
     # ("vague", "is included"): ["vague"],
     # Rules for before
-    ("before", "after"): ["before", "after", "includes", "is included", "simultaneous", "vague"],
-    ("before", "includes"): ["before", "includes", "vague"],
-    ("before", "is included"): ["before", "is included", "vague"],
+    # ("before", "after"): [
+    #     "before",
+    #     "after",
+    #     "includes",
+    #     "is included",
+    #     "simultaneous",
+    #     "vague",
+    # ],
+    # ("before", "includes"): ["before", "includes", "vague"],
+    # ("before", "is included"): ["before", "is included", "vague"],
     # ("before", "vague"): ["before", "includes", "is included", "vague"],
     # ("before", "vague"): ["vague"],
     # Rules for after
-    ("after", "before"): ["before", "after", "includes", "is included", "simultaneous", "vague"],
-    ("after", "includes"): ["after", "includes", "vague"],
-    ("after", "is included"): ["after", "is included", "vague"],
+    # ("after", "before"): [
+    #     "before",
+    #     "after",
+    #     "includes",
+    #     "is included",
+    #     "simultaneous",
+    #     "vague",
+    # ],
+    # ("after", "includes"): ["after", "includes", "vague"],
+    # ("after", "is included"): ["after", "is included", "vague"],
     # ("after", "vague"): ["after", "includes", "is included", "vague"],
     # ("after", "vague"): ["vague"],
     # Rules for includes
-    ("includes", "before"): ["before", "includes", "vague"],
-    ("includes", "after"): ["after", "includes", "vague"],
-    ("includes", "is included"): ["before", "after", "includes", "is included", "simultaneous", "vague"],
+    # ("includes", "before"): ["before", "includes", "vague"],
+    # ("includes", "after"): ["after", "includes", "vague"],
+    # ("includes", "is included"): [
+    #     "before",
+    #     "after",
+    #     "includes",
+    #     "is included",
+    #     "simultaneous",
+    #     "vague",
+    # ],
     # ("includes", "vague"): ["before", "after", "includes", "vague"],
     # ("includes", "vague"): ["vague"],
     # Rules for is included
-    ("is included", "before"): ["before", "is included", "vague"],
-    ("is included", "after"): ["after", "is included", "vague"],
-    ("is included", "includes"): ["before", "after", "includes", "is included", "simultaneous", "vague"],
+    # ("is included", "before"): ["before", "is included", "vague"],
+    # ("is included", "after"): ["after", "is included", "vague"],
+    # ("is included", "includes"): [
+    #     "before",
+    #     "after",
+    #     "includes",
+    #     "is included",
+    #     "simultaneous",
+    #     "vague",
+    # ],
     # ("is included", "vague"): ["before", "after", "is included", "vague"],
     # ("is included", "vague"): ["vague"],
     # Rules for simultaneous
@@ -102,17 +130,30 @@ def process_tb_dense(
     path = "data/"
 
     tb_dense_lines = read_txt(os.path.join(path, "TimebankDense.full.txt"))
-    tb_dense_df = pd.DataFrame(tb_dense_lines, columns=["doc_id", "event1_id", "event2_id", "relation"])
+    tb_dense_df = pd.DataFrame(
+        tb_dense_lines, columns=["doc_id", "event1_id", "event2_id", "relation"]
+    )
 
     tb_dense_docs = list(tb_dense_df.doc_id.unique())
-    logger.info(f"There are {len(tb_dense_docs)} documents with {len(tb_dense_df)} relations in total.")
+    logger.info(
+        f"There are {len(tb_dense_docs)} documents with {len(tb_dense_df)} relations in total."
+    )
 
     dev_docs = [doc.replace(".tml", "") for doc in dev_docs]
     test_docs = [doc.replace(".tml", "") for doc in test_docs]
-    train_docs = [doc for doc in tb_dense_docs if doc not in dev_docs and doc not in test_docs]
+    train_docs = [
+        doc for doc in tb_dense_docs if doc not in dev_docs and doc not in test_docs
+    ]
 
     # Replace relation abbreviations with full names
-    rel = {"s": "simultaneous", "i": "includes", "a": "after", "v": "vague", "ii": "is included", "b": "before"}
+    rel = {
+        "s": "simultaneous",
+        "i": "includes",
+        "a": "after",
+        "v": "vague",
+        "ii": "is included",
+        "b": "before",
+    }
     tb_dense_df["relation"].replace(rel, inplace=True)
 
     train_df = tb_dense_df[tb_dense_df.doc_id.isin(train_docs)]
@@ -128,8 +169,12 @@ def process_tb_dense(
         doc_pair_relations = []
         for doc_id in df.doc_id.unique():
             doc_tlinks = df.loc[df["doc_id"] == doc_id]
-            doc_pairs = list(zip(doc_tlinks.event1_id.to_list(), doc_tlinks.event2_id.to_list()))
-            doc_pair_relations.append(dict(zip(doc_pairs, doc_tlinks.relation.to_list())))
+            doc_pairs = list(
+                zip(doc_tlinks.event1_id.to_list(), doc_tlinks.event2_id.to_list())
+            )
+            doc_pair_relations.append(
+                dict(zip(doc_pairs, doc_tlinks.relation.to_list()))
+            )
 
         # Calculate statistics
         num_pairs = [len(p) for p in doc_pair_relations]
@@ -171,7 +216,10 @@ def process_tb_dense(
             "vague": "vague",
         }
 
-        doc_chains = create_chain(doc_pair_relations, trans_pairs, inverse)
+        if mode == "train":
+            doc_chains = create_chain(doc_pair_relations, trans_pairs, inverse)
+        else:
+            doc_chains = None
 
         # Construct questions
         logger.info("Constructing questions...")
@@ -187,13 +235,62 @@ def process_tb_dense(
                 query = (row["event1_id"], row["event2_id"])
 
                 # Add YN questions (one for each relation)
-                yn_questions, yn_answers = create_yn(query, row["relation"], relation_set)
+                yn_questions, yn_answers = create_yn(
+                    query, row["relation"], relation_set
+                )
 
                 for i, yn_question in enumerate(yn_questions):
+                    if mode == "train":
+                        question_info = {
+                            "num_facts": doc_chains[doc_index][query]["num_facts"],
+                            "reasoning_steps": doc_chains[doc_index][query][
+                                "reasoning_steps"
+                            ],
+                            "asked_relation": relation_set[i],
+                            "all_relations": [row["relation"]],
+                            "target_relation": [row["relation"]],
+                            "chain": doc_chains[doc_index][query]["chain"],
+                            "goal_chain": doc_chains[doc_index][query]["goal_chain"],
+                        }
+
+                        questions.append(
+                            {
+                                "q_id": q_id,
+                                "q_type": "YN",
+                                "query": query,
+                                "question_info": question_info,
+                                "question": yn_question,
+                                "answer": yn_answers[i],
+                                "candidate_answers": ["Yes", "No"],
+                            }
+                        )
+                    else:
+                        question_info = {
+                            "asked_relation": relation_set[i],
+                            "all_relations": [row["relation"]],
+                            "target_relation": [row["relation"]],
+                        }
+
+                        questions.append(
+                            {
+                                "q_id": q_id,
+                                "q_type": "YN",
+                                "query": query,
+                                "question_info": question_info,
+                                "question": yn_question,
+                                "answer": yn_answers[i],
+                                "candidate_answers": ["Yes", "No"],
+                            }
+                        )
+                    q_id += 1
+
+                # Add the FR question
+                question, answer = create_fr(row["relation"])
+                if mode == "train":
                     question_info = {
                         "num_facts": doc_chains[doc_index][query]["num_facts"],
                         "reasoning_steps": doc_chains[doc_index][query]["reasoning_steps"],
-                        "asked_relation": relation_set[i],
+                        "asked_relation": [row["relation"]],
                         "all_relations": [row["relation"]],
                         "target_relation": [row["relation"]],
                         "chain": doc_chains[doc_index][query]["chain"],
@@ -203,39 +300,32 @@ def process_tb_dense(
                     questions.append(
                         {
                             "q_id": q_id,
-                            "q_type": "YN",
+                            "q_type": "FR",
                             "query": query,
                             "question_info": question_info,
-                            "question": yn_question,
-                            "answer": yn_answers[i],
-                            "candidate_answers": ["Yes", "No"],
+                            "question": question,
+                            "answer": answer,
+                            "candidate_answers": relation_set,
                         }
                     )
-                    q_id += 1
-
-                # Add the FR question
-                question, answer = create_fr(row["relation"])
-                question_info = {
-                    "num_facts": doc_chains[doc_index][query]["num_facts"],
-                    "reasoning_steps": doc_chains[doc_index][query]["reasoning_steps"],
-                    "asked_relation": [row["relation"]],
-                    "all_relations": [row["relation"]],
-                    "target_relation": [row["relation"]],
-                    "chain": doc_chains[doc_index][query]["chain"],
-                    "goal_chain": doc_chains[doc_index][query]["goal_chain"],
-                }
-
-                questions.append(
-                    {
-                        "q_id": q_id,
-                        "q_type": "FR",
-                        "query": query,
-                        "question_info": question_info,
-                        "question": question,
-                        "answer": answer,
-                        "candidate_answers": relation_set,
+                else:
+                    question_info = {
+                        "asked_relation": [row["relation"]],
+                        "all_relations": [row["relation"]],
+                        "target_relation": [row["relation"]],
                     }
-                )
+
+                    questions.append(
+                        {
+                            "q_id": q_id,
+                            "q_type": "FR",
+                            "query": query,
+                            "question_info": question_info,
+                            "question": question,
+                            "answer": answer,
+                            "candidate_answers": relation_set,
+                        }
+                    )
                 q_id += 1
 
             doc_questions.append(questions)
@@ -243,11 +333,20 @@ def process_tb_dense(
         # Construct facts info
         logger.info("Constructing facts info...")
 
-        doc_facts_info = create_facts_info(doc_questions, inverse, trans_rules)
+        if mode == "train":
+            doc_facts_info = create_facts_info(doc_questions, inverse, trans_rules)
+        else:
+            doc_facts_info = {}
 
         # Build final data structure
         logger.info("Building final data structure...")
-        data = build_data(list(df.doc_id.unique()), doc_story_triplets, doc_questions, doc_objects_info, doc_facts_info)
+        data = build_data(
+            list(df.doc_id.unique()),
+            doc_story_triplets,
+            doc_questions,
+            doc_objects_info,
+            doc_facts_info,
+        )
 
         # Save to JSON
         logger.info("Saving data to JSON...")

@@ -580,7 +580,7 @@ def build_data(ids, story_triplets, questions, objects_info, facts_info):
             "story_triplets": story_triplets[i],
             "questions": questions[i],
             "objects_info": objects_info[i],
-            "facts_info": facts_info[i],
+            "facts_info": facts_info[i] if i < len(facts_info) else {},
         }
         data.append(entry)
     return data
