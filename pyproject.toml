@@ -3,21 +3,21 @@ name = "tempQchain"
 version = "0.1.0"
 description = "An adaptation of the Q-chain approach used for Spartun"
 authors = [{ name = "Max Moser", email = "maxmoser.15@gmail.com" }]
-requires-python = "==3.11.11"
+requires-python = ">=3.12"
 readme = "README.md"
 dependencies = [
-    "domiknows==0.533",
-    "peft==0.10.0",
-    "pandas==2.2.1",
-    "numpy==1.26.4",
-    "sentencepiece==0.2.0",
-    "torch==2.2.1",
-    "tqdm==4.66.2",
+    "domiknows>=1.0.0",
+    "peft>=0.10.0",
+    "pandas>=2.3.2",
+    "numpy>=1.26.4",
+    "sentencepiece>=0.2.1",
+    "torch>=2.2.1",
+    "tqdm>=4.66.2",
     "transformers>=4.48.0",
-    "spacy==3.7.4",
-    "accelerate==0.29.1",
+    "spacy>=3.8.0",
+    "accelerate>=1.10.1",
     "python-dotenv>=1.1.0,<2.0.0",
-    "pytest==8.3.5",
+    "pytest>=8.3.5",
     "pytest-cov>=5.0.0,<6",
     "beautifulsoup4>=4.13.4",
     "lxml>=6.0.0",
