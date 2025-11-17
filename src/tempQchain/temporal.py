@@ -115,6 +115,7 @@ def main(args: Any) -> None:
         device=cur_device,
         model_dir=args.best_model_dir,
         best_model_name=args.best_model_name,
+        batch_size=args.batch_size,
     )
 
     history = results["history"]

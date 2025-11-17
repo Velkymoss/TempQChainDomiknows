@@ -175,7 +175,7 @@ class LossProgram(LearningBasedProgram):
         dataset_size = None, # provide dataset_size if dataset does not have len implemented
         print_loss = True, # print loss on each grad update
         **kwargs):
-
+        
         if batch_size < 1:
             raise ValueError(f'batch_size must be at least 1, but got batch_size={batch_size}')
 
@@ -209,7 +209,8 @@ class LossProgram(LearningBasedProgram):
                 loss = mloss
             else:
                 closs, *_ = self.cmodel(output[1])
-                if torch.is_nonzero(closs):
+               
+                if isinstance(closs, torch.Tensor) and torch.is_nonzero(closs):
                     loss = mloss + self.beta * closs
                     # self.logger.info('closs is not zero')
                 else:
