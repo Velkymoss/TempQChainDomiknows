@@ -79,7 +79,7 @@ class LossProgram(LearningBasedProgram):
         # if COptim is not None and list(self.model.parameters()):
         #     self.copt = COptim(self.model.parameters())
         if list(self.cmodel.parameters()):
-            self.copt = torch.optim.Adam(self.cmodel.parameters(), lr=c_lr)
+            self.copt = torch.optim.SGD(self.cmodel.parameters(), lr=c_lr)
         else:
             self.copt = None
             
