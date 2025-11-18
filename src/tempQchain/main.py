@@ -6,6 +6,7 @@ app = typer.Typer(help="TempQChain CLI")
 @app.command()
 def create_tb_dense(
     save_rules: bool = typer.Option(False, help="Save transitivity rules to file"),
+    augment_train: bool = typer.Option(False, help="Augment training set with q-chains")
 ):
     """Process TB-Dense data and create training/dev/test splits."""
     import tempQchain.data.create_tb_dense as create_tb_dense
@@ -16,6 +17,7 @@ def create_tb_dense(
         create_tb_dense.process_tb_dense(
             trans_rules=create_tb_dense.trans_rules,
             save_rules_to_file=save_rules,
+            augment_train=augment_train
         )
         typer.echo("✅ Data processing completed successfully!")
     except Exception as e:

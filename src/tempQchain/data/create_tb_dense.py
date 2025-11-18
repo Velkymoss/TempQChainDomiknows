@@ -1,5 +1,6 @@
 import os
 from statistics import mean
+from typing import Any
 
 import pandas as pd
 
@@ -124,10 +125,13 @@ def process_tb_dense(
     test_docs: list[str] = testDocs,
     save_rules_to_file: bool = False,
     saving_path: str = "data/",
+    augment_train: bool = False,
 ) -> None:
     # Load and preprocess data
     logger.info("Loading TB-Dense data...")
     path = "data/"
+
+    logger.info(f"Train data augmentation set to {augment_train}")
 
     tb_dense_lines = read_txt(os.path.join(path, "TimebankDense.full.txt"))
     tb_dense_df = pd.DataFrame(
@@ -216,7 +220,7 @@ def process_tb_dense(
             "vague": "vague",
         }
 
-        if mode == "train":
+        if mode == "train" and augment_train:
             doc_chains = create_chain(doc_pair_relations, trans_pairs, inverse)
         else:
             doc_chains = None
@@ -240,7 +244,7 @@ def process_tb_dense(
                 )
 
                 for i, yn_question in enumerate(yn_questions):
-                    if mode == "train":
+                    if mode == "train" and augment_train:
                         question_info = {
                             "num_facts": doc_chains[doc_index][query]["num_facts"],
                             "reasoning_steps": doc_chains[doc_index][query][
@@ -286,7 +290,7 @@ def process_tb_dense(
 
                 # Add the FR question
                 question, answer = create_fr(row["relation"])
-                if mode == "train":
+                if mode == "train" and augment_train:
                     question_info = {
                         "num_facts": doc_chains[doc_index][query]["num_facts"],
                         "reasoning_steps": doc_chains[doc_index][query]["reasoning_steps"],
@@ -333,7 +337,7 @@ def process_tb_dense(
         # Construct facts info
         logger.info("Constructing facts info...")
 
-        if mode == "train":
+        if mode == "train" and augment_train:
             doc_facts_info = create_facts_info(doc_questions, inverse, trans_rules)
         else:
             doc_facts_info = {}
