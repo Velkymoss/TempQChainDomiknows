@@ -72,9 +72,6 @@ class LossProgram(LearningBasedProgram):
         c_freq_increase_freq=1,
         c_lr_decay=4,  # strategy
         c_lr_decay_param=1,  # param in the strategy
-        batch_size = 1,
-        dataset_size = None, # provide dataset_size if dataset does not have len implemented
-        print_loss = True, # print loss on each grad update
         **kwargs):
         
         # if COptim is None:
@@ -82,7 +79,7 @@ class LossProgram(LearningBasedProgram):
         # if COptim is not None and list(self.model.parameters()):
         #     self.copt = COptim(self.model.parameters())
         if list(self.cmodel.parameters()):
-            self.copt = torch.optim.Adam(self.cmodel.parameters(), lr=c_lr)
+            self.copt = torch.optim.SGD(self.cmodel.parameters(), lr=c_lr)
         else:
             self.copt = None
             
@@ -100,9 +97,6 @@ class LossProgram(LearningBasedProgram):
             c_lr_decay=c_lr_decay,
             c_lr_decay_param=c_lr_decay_param,
             c_session=c_session,
-            batch_size=batch_size,
-            dataset_size=dataset_size,
-            print_loss=print_loss,
             **kwargs)
     
     def call_epoch(self, name, dataset, epoch_fn, **kwargs):
@@ -122,8 +116,7 @@ class LossProgram(LearningBasedProgram):
                 if self.dbUpdate is not None:
                     self.dbUpdate(desc, metricName, metricResult)
                     
-            if self.cmodel.loss is not None and  repr(self.cmodel.loss) == "'None'":
-                losSTr = str(self.cmodel.loss)
+            if self.cmodel.loss and self.cmodel.loss is not None:
                 desc = name if self.epoch is None else f'Epoch {self.epoch} {name}'
                 self.logger.info(' - Constraint loss:')
                 self.logger.info(self.cmodel.loss)
@@ -162,6 +155,9 @@ class LossProgram(LearningBasedProgram):
                         softmaxMetric = metric
 #         super().call_epoch(name=name, dataset=dataset, epoch_fn=epoch_fn, **kwargs)
         
+
+    
+
     def train_epoch(
         self, dataset,
         c_lr=1,
@@ -171,14 +167,7 @@ class LossProgram(LearningBasedProgram):
         c_lr_decay=0,  # strategy
         c_lr_decay_param=1,
         c_session={},
-        batch_size = 1,
-        dataset_size = None, # provide dataset_size if dataset does not have len implemented
-        print_loss = True, # print loss on each grad update
         **kwargs):
-        
-        if batch_size < 1:
-            raise ValueError(f'batch_size must be at least 1, but got batch_size={batch_size}')
-
         assert c_session
         from torch import autograd
         torch.autograd.set_detect_anomaly(False)
@@ -192,62 +181,25 @@ class LossProgram(LearningBasedProgram):
         self.model.reset()
         self.cmodel.train()
         self.cmodel.reset()
-
-        # try to get the number of iterations
-        num_data_iters = dataset_size
-        if num_data_iters is None:
-            if not hasattr(dataset, '__len__'):
-                raise ValueError(f'dataset must have attribute __len__ if dataset_size is not provided')
-
-            num_data_iters = len(dataset)
-
-        batch_loss = 0.0 # track accumulated loss across batch for logging
-        for data_idx, data in enumerate(dataset):
-            # forward pass
+        for data in dataset:
+            if self.opt is not None:
+                self.opt.zero_grad()
+            if self.copt is not None:
+                self.copt.zero_grad()
             mloss, metric, *output = self.model(data)  # output = (datanode, builder)
             if iter < c_warmup_iters:
                 loss = mloss
             else:
                 closs, *_ = self.cmodel(output[1])
-               
-                if isinstance(closs, torch.Tensor) and torch.is_nonzero(closs):
-                    loss = mloss + self.beta * closs
-                    # self.logger.info('closs is not zero')
-                else:
-                    loss = mloss
-
-            if not loss:
-                continue
-
-            # get hypothetical position in the batch
-            batch_pos = data_idx % batch_size
-
-            # calculate gradients for item
-            loss /= batch_size
-            batch_loss += loss.item()
-            loss.backward()
-
-            # only update if we're the last item in the batch
-            # or if we're the last item in the dataset
-            do_update = (
-                (batch_pos == (batch_size - 1)) or
-                (data_idx == (num_data_iters - 1))
-            )
-
-            # log loss on each update
-            if do_update:
-                # self.logger.info(f'loss (i={data_idx}) = {batch_loss:.3f}')
-                pass
-
-            # do backwards pass update
-            if self.opt is not None and do_update:
+                loss = mloss + self.beta * closs
+            if self.opt is not None and loss:
+                loss.backward()
                 self.opt.step()
-            iter += 1
-
+                iter += 1
             if (
                 self.copt is not None and
+                loss and
                 iter > c_warmup_iters and
-                do_update and
                 iter - c_update_iter > c_update_freq
             ):
                 # NOTE: Based on the face the gradient of lambda in dual
@@ -293,16 +245,7 @@ class LossProgram(LearningBasedProgram):
                     raise ValueError(f'c_lr_decay={c_lr_decay} not supported.')
                 for param_group in self.copt.param_groups:
                     param_group['lr'] = update_lr(param_group['lr'])
-            
             yield (loss, metric, *output[:1])
-
-            # only zero out grads & loss tracker if we've done an update
-            if do_update:
-                batch_loss = 0.0
-                if self.opt is not None:
-                    self.opt.zero_grad()
-                if self.copt is not None:
-                    self.copt.zero_grad()
 
         c_session['iter'] = iter
         c_session['c_update_iter'] = c_update_iter
@@ -314,21 +257,12 @@ class LossProgram(LearningBasedProgram):
 #         self.cmodel.mode(Mode.TEST)
         yield from super().test_epoch(dataset)
         
-    def populate_epoch(self, dataset, grad = False):
+    def populate_epoch(self, dataset):
         self.model.mode(Mode.POPULATE)
 #         self.cmodel.mode(Mode.POPULATE)
         self.model.reset()
-        if not grad:
-            with torch.no_grad():
-                for i, data_item in enumerate(dataset):
-                    _, _, *output = self.model(data_item)
-                    yield detuple(*output[:1])
-        else:
+        with torch.no_grad():
             for i, data_item in enumerate(dataset):
-                for dataKey in data_item:
-                    if data_item[dataKey].dtype in [torch.float32, torch.float64, torch.complex64, torch.complex128]:
-                        data_item[dataKey].requires_grad= True
-                    
                 _, _, *output = self.model(data_item)
                 yield detuple(*output[:1])
         
