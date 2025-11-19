@@ -57,7 +57,6 @@ def program_declaration_tb_dense_yn(
         questions: str, stories: str, relations: str, q_ids: str, labels: str
     ) -> tuple[torch.Tensor, list[str], list[str], list[str], torch.LongTensor, torch.LongTensor]:
         num_labels = make_labels(labels)
-        print(num_labels)
         ids = str_to_int_list(q_ids.split("@@"))
         return (
             torch.ones(len(questions.split("@@")), 1),
