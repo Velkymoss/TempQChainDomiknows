@@ -1,5 +1,5 @@
 from domiknows.graph import Concept, EnumConcept, Graph, Relation
-from domiknows.graph.logicalConstrain import andL, ifL, orL
+from domiknows.graph.logicalConstrain import andL, ifL
 
 CONSTRAIN_ACTIVE = True
 

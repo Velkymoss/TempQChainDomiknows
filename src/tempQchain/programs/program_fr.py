@@ -82,12 +82,11 @@ def program_declaration_tb_dense_fr(
     question[answer_class] = FunctionalSensor(story_contain, "label", forward=read_label, label=True, device=device)
 
     tokenizer = BERTTokenizer()
-    question["input_ids", "attention_mask"] = JointSensor(story_contain, "question", "story", forward=tokenizer, device=device)
-    classifier = Bert(              
-    device="cuda" if torch.cuda.is_available() else "cpu",
-    drp=dropout,
-    num_classes=6,
-    tokenizer=tokenizer.tokenizer
+    question["input_ids", "attention_mask"] = JointSensor(
+        story_contain, "question", "story", forward=tokenizer, device=device
+    )
+    classifier = Bert(
+        device="cuda" if torch.cuda.is_available() else "cpu", drp=dropout, num_classes=6, tokenizer=tokenizer.tokenizer
     )
     question[answer_class] = ModuleLearner("input_ids", "attention_mask", module=classifier, device=device)
 
@@ -109,7 +108,7 @@ def program_declaration_tb_dense_fr(
 
         poi_list.extend([inverse, transitive])
 
-    infer_list = ["ILP", "local/argmax"] 
+    infer_list = ["ILP", "local/argmax"]
     if pmd:
         if class_weights is not None:
             criterion = NBCrossEntropyLoss(weight=class_weights)

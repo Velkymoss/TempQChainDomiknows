@@ -1,6 +1,5 @@
 import os
 from statistics import mean
-from typing import Any
 
 import pandas as pd
 
@@ -134,20 +133,14 @@ def process_tb_dense(
     logger.info(f"Train data augmentation set to {augment_train}")
 
     tb_dense_lines = read_txt(os.path.join(path, "TimebankDense.full.txt"))
-    tb_dense_df = pd.DataFrame(
-        tb_dense_lines, columns=["doc_id", "event1_id", "event2_id", "relation"]
-    )
+    tb_dense_df = pd.DataFrame(tb_dense_lines, columns=["doc_id", "event1_id", "event2_id", "relation"])
 
     tb_dense_docs = list(tb_dense_df.doc_id.unique())
-    logger.info(
-        f"There are {len(tb_dense_docs)} documents with {len(tb_dense_df)} relations in total."
-    )
+    logger.info(f"There are {len(tb_dense_docs)} documents with {len(tb_dense_df)} relations in total.")
 
     dev_docs = [doc.replace(".tml", "") for doc in dev_docs]
     test_docs = [doc.replace(".tml", "") for doc in test_docs]
-    train_docs = [
-        doc for doc in tb_dense_docs if doc not in dev_docs and doc not in test_docs
-    ]
+    train_docs = [doc for doc in tb_dense_docs if doc not in dev_docs and doc not in test_docs]
 
     # Replace relation abbreviations with full names
     rel = {
@@ -173,12 +166,8 @@ def process_tb_dense(
         doc_pair_relations = []
         for doc_id in df.doc_id.unique():
             doc_tlinks = df.loc[df["doc_id"] == doc_id]
-            doc_pairs = list(
-                zip(doc_tlinks.event1_id.to_list(), doc_tlinks.event2_id.to_list())
-            )
-            doc_pair_relations.append(
-                dict(zip(doc_pairs, doc_tlinks.relation.to_list()))
-            )
+            doc_pairs = list(zip(doc_tlinks.event1_id.to_list(), doc_tlinks.event2_id.to_list()))
+            doc_pair_relations.append(dict(zip(doc_pairs, doc_tlinks.relation.to_list())))
 
         # Calculate statistics
         num_pairs = [len(p) for p in doc_pair_relations]
@@ -239,17 +228,13 @@ def process_tb_dense(
                 query = (row["event1_id"], row["event2_id"])
 
                 # Add YN questions (one for each relation)
-                yn_questions, yn_answers = create_yn(
-                    query, row["relation"], relation_set
-                )
+                yn_questions, yn_answers = create_yn(query, row["relation"], relation_set)
 
                 for i, yn_question in enumerate(yn_questions):
                     if mode == "train" and augment_train:
                         question_info = {
                             "num_facts": doc_chains[doc_index][query]["num_facts"],
-                            "reasoning_steps": doc_chains[doc_index][query][
-                                "reasoning_steps"
-                            ],
+                            "reasoning_steps": doc_chains[doc_index][query]["reasoning_steps"],
                             "asked_relation": relation_set[i],
                             "all_relations": [row["relation"]],
                             "target_relation": [row["relation"]],

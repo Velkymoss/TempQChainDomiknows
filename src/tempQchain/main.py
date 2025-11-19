@@ -6,7 +6,7 @@ app = typer.Typer(help="TempQChain CLI")
 @app.command()
 def create_tb_dense(
     save_rules: bool = typer.Option(False, help="Save transitivity rules to file"),
-    augment_train: bool = typer.Option(False, help="Augment training set with q-chains")
+    augment_train: bool = typer.Option(False, help="Augment training set with q-chains"),
 ):
     """Process TB-Dense data and create training/dev/test splits."""
     import tempQchain.data.create_tb_dense as create_tb_dense
@@ -15,9 +15,7 @@ def create_tb_dense(
 
     try:
         create_tb_dense.process_tb_dense(
-            trans_rules=create_tb_dense.trans_rules,
-            save_rules_to_file=save_rules,
-            augment_train=augment_train
+            trans_rules=create_tb_dense.trans_rules, save_rules_to_file=save_rules, augment_train=augment_train
         )
         typer.echo("✅ Data processing completed successfully!")
     except Exception as e:
@@ -46,7 +44,6 @@ def temporal_fr(
     sampling: bool = typer.Option(False, help="Use sampling loss"),
     sampling_size: int = typer.Option(1, help="Sampling size"),
     # Additional options
-    text_rules: bool = typer.Option(False, help="Include rules as text"),
     cuda: int = typer.Option(0, help="CUDA device number (-1 for CPU)"),
     # Model loading/saving, experiment tracking
     best_model_name: str = typer.Option("best_model", help="File name to save model"),
@@ -55,7 +52,7 @@ def temporal_fr(
 ):
     import argparse
 
-    import tempQchain.temporal as temporal
+    import tempQchain.temporal_fr as temporal_fr
 
     args = argparse.Namespace(
         model=model,
@@ -65,7 +62,6 @@ def temporal_fr(
         cuda=cuda,
         batch_size=batch_size,
         data_path=data_path,
-        text_rules=text_rules,
         dropout=dropout,
         pmd=pmd,
         beta=beta,
@@ -78,21 +74,21 @@ def temporal_fr(
         use_class_weights=use_class_weights,
         patience=patience,
     )
-    temporal.main(args)
+    temporal_fr.main(args)
 
 
 @app.command()
 def temporal_yn(
     # Training parameters
+    model: str = typer.Option("bert", help="Model used"),
     epoch: int = typer.Option(1, help="Number of training epochs"),
     lr: float = typer.Option(1e-5, help="Learning rate"),
-    batch_size: int = typer.Option(100000, help="Batch size for training"),
-    check_epoch: int = typer.Option(1, help="Check evaluation every N epochs"),
+    weight_decay: float = typer.Option(1e-3, help="Weight decay for AdamW"),
+    batch_size: int = typer.Option(4, help="Batch size for training"),
+    patience: int = typer.Option(3, help="Patience for early stopping"),
     # Data parameters
     data_path: str = typer.Option("data/", help="Path to the data folder"),
-    results_path: str = typer.Option("models/", help="Path to save models and predictions"),
     # Model parameters
-    model: str = typer.Option("bert", help="Model type to use"),
     dropout: bool = typer.Option(False, help="Enable dropout"),
     constraints: bool = typer.Option(False, help="Enable constraints"),
     use_class_weights: bool = typer.Option(False, help="Enable class weights for training"),
@@ -102,47 +98,37 @@ def temporal_yn(
     sampling: bool = typer.Option(False, help="Use sampling loss"),
     sampling_size: int = typer.Option(1, help="Sampling size"),
     # Additional options
-    text_rules: bool = typer.Option(False, help="Include rules as text"),
     cuda: int = typer.Option(0, help="CUDA device number (-1 for CPU)"),
-    check_condition: str = typer.Option("acc", help="Check condition: acc (accuracy) or loss"),
-    # Model loading/saving and experiment tracking
-    loaded: bool = typer.Option(False, help="Load and evaluate existing model"),
-    loaded_file: str = typer.Option("train_model", help="File name to load model from"),
-    loaded_train: bool = typer.Option(False, help="Load model and continue training"),
-    save: bool = typer.Option(False, help="Save the trained model"),
-    save_file: str = typer.Option("train_model", help="File name to save model"),
+    # Model loading/saving, experiment tracking
+    best_model_name: str = typer.Option("best_model", help="File name to save model"),
+    best_model_dir: str = typer.Option("models/", help="File name to save model"),
     use_mlflow: bool = typer.Option(False, help="Use MLflow for experiment tracking"),
 ):
     import argparse
 
-    import tempQchain.temporal_YN as temporal_YN
+    import tempQchain.temporal_yn as temporal_yn
 
     args = argparse.Namespace(
+        model=model,
         epoch=epoch,
         lr=lr,
+        weight_decay=weight_decay,
         cuda=cuda,
         batch_size=batch_size,
         data_path=data_path,
-        results_path=results_path,
-        text_rules=text_rules,
         dropout=dropout,
         pmd=pmd,
         beta=beta,
         sampling=sampling,
         sampling_size=sampling_size,
         constraints=constraints,
-        loaded=loaded,
-        loaded_file=loaded_file,
-        loaded_train=loaded_train,
-        save=save,
-        save_file=save_file,
-        check_epoch=check_epoch,
-        model=model,
-        check_condition=check_condition,
+        best_model_name=best_model_name,
+        best_model_dir=best_model_dir,
         use_mlflow=use_mlflow,
         use_class_weights=use_class_weights,
+        patience=patience,
     )
-    temporal_YN.main(args)
+    temporal_yn.main(args)
 
 
 if __name__ == "__main__":

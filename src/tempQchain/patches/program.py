@@ -1,11 +1,12 @@
 import logging
 import os
+
 import torch
 from tqdm import tqdm
 
-from ..utils import consume, entuple, detuple
-from .model.base import Mode
 from ..sensor.pytorch.sensors import TorchSensor
+from ..utils import consume, detuple
+from .model.base import Mode
 
 
 def get_len(dataset, default=None):
@@ -15,32 +16,34 @@ def get_len(dataset, default=None):
         return default
 
 
-class dbUpdate():
+class dbUpdate:
     def getTimeStamp(self):
-        from datetime import datetime, timezone, timedelta
+        from datetime import datetime, timedelta, timezone
 
         timeNow = datetime.now(tz=timezone.utc)
-        epoch = datetime(1970, 1, 1, tzinfo=timezone.utc) # use POSIX epoch
+        epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)  # use POSIX epoch
         timestamp_micros = (timeNow - epoch) // timedelta(microseconds=1)
 
         return timestamp_micros
 
     def __init__(self, graph):
-        self.experimentID = "startAt_%d"%(self.getTimeStamp())
+        self.experimentID = "startAt_%d" % (self.getTimeStamp())
 
         import os
+
         self.cwd = os.getcwd()
         self.cwd = os.path.basename(self.cwd)
 
         import __main__
-        if hasattr(__main__, '__file__'):
+
+        if hasattr(__main__, "__file__"):
             self.programName = os.path.basename(__main__.__file__)
             print(self.programName)
             # if self.programName.index('.') >= 0:
-            if '.' in self.programName:
-                self.programName = self.programName[:self.programName.index('.')]
+            if "." in self.programName:
+                self.programName = self.programName[: self.programName.index(".")]
         else:
-            self.programName = ''
+            self.programName = ""
 
         try:
             import os
@@ -49,23 +52,22 @@ class dbUpdate():
             _dir_path = Path(os.path.realpath(__file__))
             dir_path = _dir_path.parent.parent.parent
 
-            mongoDBPermFile = 'MongoDB-DK.pem'
+            mongoDBPermFile = "MongoDB-DK.pem"
             mongoDBPermPath = None
 
             for root, dir, files in os.walk(dir_path):
                 if mongoDBPermFile in files:
-                    mongoDBPermPath= os.path.join(root, mongoDBPermFile)
+                    mongoDBPermPath = os.path.join(root, mongoDBPermFile)
 
             if mongoDBPermPath is None:
                 self.dbClient = None
                 return
 
             from pymongo import MongoClient
+
             uri = "mongodb+srv://cluster0.us5bm.mongodb.net/Cluster0?authSource=%24external&authMechanism=MONGODB-X509&retryWrites=true&w=majority"
-            self.dbClient = MongoClient(uri,
-                                        tls=True,
-                                        tlsCertificateKeyFile=mongoDBPermPath)
-        except Exception as ex:
+            self.dbClient = MongoClient(uri, tls=True, tlsCertificateKeyFile=mongoDBPermPath)
+        except Exception:
             self.dbClient = None
             return
 
@@ -78,40 +80,38 @@ class dbUpdate():
                 self.activeLCs.append(lc.name)
 
     def __calculateMetricTotal(self, metricResult):
-
         if not isinstance(metricResult, dict):
             return None
 
-        pT= 0
+        pT = 0
         rT = 0
 
         for _, v in metricResult.items():
             if not isinstance(v, dict):
                 return None
 
-            if not ({'P', 'R'} <= v.keys()):
+            if not ({"P", "R"} <= v.keys()):
                 return None
 
-            pT += v['P']
-            rT += v['R']
+            pT += v["P"]
+            rT += v["R"]
 
-        pT = pT/len(metricResult.keys())
-        rT = rT/len(metricResult.keys())
+        pT = pT / len(metricResult.keys())
+        rT = rT / len(metricResult.keys())
 
         total = {}
         if pT + rT:
-            f1T = 2 * pT * rT / (pT + rT) # F1 score is the harmonic mean of precision and recall
-            total['F1'] = f1T
+            f1T = 2 * pT * rT / (pT + rT)  # F1 score is the harmonic mean of precision and recall
+            total["F1"] = f1T
         else:
             return None
 
-        total['P'] = pT
-        total['R'] = rT
+        total["P"] = pT
+        total["R"] = rT
 
         return total
 
     def __call__(self, stepName, metricName, metricResult):
-
         if self.dbClient is None:
             return
 
@@ -133,22 +133,22 @@ class dbUpdate():
                 upatedmetricResult[k] = r
 
         mlResult = {
-            'experimentID' : self.experimentID,
-            'experimant'   : self.cwd,
-            'program'      : self.programName,
-            'usedLCs'      : self.activeLCs,
-            'timestamp'    : self.getTimeStamp(),
-            'step'         : stepName,
-            'metric'       : metricName,
-            'results'      : upatedmetricResult
+            "experimentID": self.experimentID,
+            "experimant": self.cwd,
+            "program": self.programName,
+            "usedLCs": self.activeLCs,
+            "timestamp": self.getTimeStamp(),
+            "step": stepName,
+            "metric": metricName,
+            "results": upatedmetricResult,
         }
 
         metricTotal = self.__calculateMetricTotal(upatedmetricResult)
 
         if metricTotal is not None:
-            mlResult['metricTotal'] = metricTotal
+            mlResult["metricTotal"] = metricTotal
 
-        #Step 3: Insert business object directly into MongoDB via isnert_one
+        # Step 3: Insert business object directly into MongoDB via isnert_one
         try:
             result = self.results.insert_one(mlResult)
         except Exception as e:
@@ -158,7 +158,7 @@ class dbUpdate():
             pass
 
 
-class LearningBasedProgram():
+class LearningBasedProgram:
     def __init__(self, graph, Model, logger=None, db=False, **kwargs):
         self.graph = graph
 
@@ -166,24 +166,25 @@ class LearningBasedProgram():
         self.dbUpdate = None if db else dbUpdate(graph)
 
         from inspect import signature
+
         modelSignature = signature(Model.__init__)
-        
+
         modelKwargs = {}
         for param in modelSignature.parameters.values():
             paramName = param.name
             if paramName in kwargs:
                 modelKwargs[paramName] = kwargs[paramName]
-                
+
         self.model = Model(graph, **modelKwargs)
         self.opt = None
         self.epoch = None
         self.stop = None
         self.device = "auto"
         if "f" in kwargs:
-            self.f=kwargs["f"]
+            self.f = kwargs["f"]
 
-    def to(self, device='auto'):
-        if device == 'auto':
+    def to(self, device="auto"):
+        if device == "auto":
             is_cuda = torch.cuda.is_available()
             if is_cuda:
                 self.device = torch.device("cuda")
@@ -211,16 +212,16 @@ class LearningBasedProgram():
 
     def call_epoch(self, name, dataset, epoch_fn, **kwargs):
         if dataset is not None:
-            self.logger.info(f'{name}:')
-            desc = name if self.epoch is None else f'Epoch {self.epoch} {name}'
+            self.logger.info(f"{name}:")
+            desc = name if self.epoch is None else f"Epoch {self.epoch} {name}"
 
             consume(tqdm(epoch_fn(dataset, **kwargs), total=get_len(dataset), desc=desc))
 
             if self.model.loss:
-                self.logger.info(' - loss:')
+                self.logger.info(" - loss:")
                 self.logger.info(self.model.loss)
 
-                metricName = 'loss'
+                metricName = "loss"
                 metricResult = self.model.loss
 
                 if self.dbUpdate is not None:
@@ -230,14 +231,14 @@ class LearningBasedProgram():
             softmaxMetric = None
 
             if self.model.metric:
-                self.logger.info(' - metric:')
+                self.logger.info(" - metric:")
                 for key, metric in self.model.metric.items():
-                    self.logger.info(f' - - {key}')
+                    self.logger.info(f" - - {key}")
                     self.logger.info(metric)
 
                     try:
-                        self.f.write(f' - - {name}')
-                        self.f.write(f' - - {key}')
+                        self.f.write(f" - - {name}")
+                        self.f.write(f" - - {key}")
                         self.f.write("\n")
                         self.f.write(str(metric))
                         self.f.write("\n")
@@ -249,10 +250,10 @@ class LearningBasedProgram():
                     if self.dbUpdate is not None:
                         self.dbUpdate(desc, metricName, metricResult)
 
-                    if key == 'ILP':
+                    if key == "ILP":
                         ilpMetric = metric
 
-                    if key == 'softmax':
+                    if key == "softmax":
                         softmaxMetric = metric
 
             """if ilpMetric is not None and softmaxMetric is not None:
@@ -274,66 +275,67 @@ class LearningBasedProgram():
         Optim=None,
         model_dir=None,
         best_model_name=None,
-        **kwargs):
+        **kwargs,
+    ):
         if device is not None:
             self.to(device)
         if Optim is not None and list(self.model.parameters()):
             self.opt = Optim(self.model.parameters())
-       
+
         history = {
-        'train_loss': [],
-        'val_loss': [],
-        'train_f1': [],
-        'val_f1': [],
+            "train_loss": [],
+            "val_loss": [],
+            "train_f1": [],
+            "val_f1": [],
         }
 
         self.train_epoch_num = train_epoch_num
         self.epoch = 0
-        best_f1=0
+        best_f1 = 0
         best_epoch = -1
         epochs_no_improve = 0
         self.stop = False
         while self.epoch < self.train_epoch_num and not self.stop:
             self.epoch += 1
-            self.logger.info('Epoch: %d', self.epoch)
+            self.logger.info("Epoch: %d", self.epoch)
 
-            self.call_epoch('Training', training_set, self.train_epoch, **kwargs)
+            self.call_epoch("Training", training_set, self.train_epoch, **kwargs)
             if self.model.loss:
                 train_loss = self.model.loss.value()["answer_class"]
                 history["train_loss"].append(train_loss)
-                self.logger.info(f'Training Loss: {train_loss:.6f}')
+                self.logger.info(f"Training Loss: {train_loss:.6f}")
             if self.model.metric and "argmax" in self.model.metric:
                 train_metrics = self.model.metric["argmax"].value()["answer_class"]
-                train_f1_dict = {k: v for k, v in train_metrics.items() if 'F1' in k}
-                self.logger.info('Training F1 Scores:')
+                train_f1_dict = {k: v for k, v in train_metrics.items() if "F1" in k}
+                self.logger.info("Training F1 Scores:")
                 for label, f1_score in train_f1_dict.items():
-                    self.logger.info(f'  {label}: {f1_score:.4f}')
+                    self.logger.info(f"  {label}: {f1_score:.4f}")
                 train_f1_values = list(train_f1_dict.values())
                 train_macro_f1 = sum(train_f1_values) / len(train_f1_values) if train_f1_values else 0.0
                 history["train_f1"].append(train_macro_f1)
-                self.logger.info(f'Training Macro F1: {train_macro_f1:.4f}')
+                self.logger.info(f"Training Macro F1: {train_macro_f1:.4f}")
 
             if valid_set is not None:
-                self.call_epoch('Validation', valid_set, self.test_epoch, **kwargs)
+                self.call_epoch("Validation", valid_set, self.test_epoch, **kwargs)
                 if self.model.loss:
                     val_loss = self.model.loss.value()["answer_class"]
                     history["val_loss"].append(val_loss)
-                    self.logger.info(f'Validation Loss: {val_loss:.6f}')
+                    self.logger.info(f"Validation Loss: {val_loss:.6f}")
                 if self.model.metric and "argmax" in self.model.metric:
                     val_metrics = self.model.metric["argmax"].value()["answer_class"]
-                    val_f1_dict = {k: v for k, v in val_metrics.items() if 'F1' in k}
-                    self.logger.info('Validation F1 Scores:')
+                    val_f1_dict = {k: v for k, v in val_metrics.items() if "F1" in k}
+                    self.logger.info("Validation F1 Scores:")
                     for label, f1_score in val_f1_dict.items():
-                        self.logger.info(f'  {label}: {f1_score:.4f}')
+                        self.logger.info(f"  {label}: {f1_score:.4f}")
                     val_f1_values = list(val_f1_dict.values())
                     val_macro_f1 = sum(val_f1_values) / len(val_f1_values) if val_f1_values else 0.0
                     history["val_f1"].append(val_macro_f1)
-                    self.logger.info(f'Validation Macro F1: {val_macro_f1:.4f}')
+                    self.logger.info(f"Validation Macro F1: {val_macro_f1:.4f}")
 
                 if val_macro_f1 >= best_f1:
                     best_epoch = self.epoch
                     best_f1 = val_macro_f1
-                
+
                     if model_dir and best_model_name:
                         os.makedirs(model_dir, exist_ok=True)
                         model_path = os.path.join(model_dir, best_model_name)
@@ -346,58 +348,54 @@ class LearningBasedProgram():
 
                 if epochs_no_improve >= patience:
                     self.logger.info(f"Early stopping triggered after {patience} epochs without improvement.")
-                    self.stop=True
+                    self.stop = True
 
             if test_every_epoch and test_set is not None:
-                self.call_epoch('Testing', test_set, self.test_epoch, **kwargs)
+                self.call_epoch("Testing", test_set, self.test_epoch, **kwargs)
                 if self.model.loss:
                     test_loss = self.model.loss.value()["answer_class"]
-                    self.logger.info(f'Test Loss: {test_loss:.6f}')
+                    self.logger.info(f"Test Loss: {test_loss:.6f}")
                 if self.model.metric and "argmax" in self.model.metric:
                     test_metrics = self.model.metric["argmax"].value()["answer_class"]
-                    test_f1_dict = {k: v for k, v in test_metrics.items() if 'F1' in k}
-                    self.logger.info('Test F1 Scores:')
+                    test_f1_dict = {k: v for k, v in test_metrics.items() if "F1" in k}
+                    self.logger.info("Test F1 Scores:")
                     for label, f1_score in test_f1_dict.items():
-                        self.logger.info(f'  {label}: {f1_score:.4f}')
+                        self.logger.info(f"  {label}: {f1_score:.4f}")
                     test_f1_values = list(test_f1_dict.values())
                     test_macro_f1 = sum(test_f1_values) / len(test_f1_values) if test_f1_values else 0.0
-                    self.logger.info(f'Test Macro F1: {test_macro_f1:.4f}')
-            
-            self.logger.info('=' * 80)
+                    self.logger.info(f"Test Macro F1: {test_macro_f1:.4f}")
+
+            self.logger.info("=" * 80)
 
         self.logger.info(f"Best epoch {best_epoch}")
         self.logger.info(f"Best eval F1 {best_f1}%")
-        
+
         if not test_every_epoch and test_set is not None:
-            self.logger.info('=' * 80)
-            self.logger.info('Final Test Evaluation')
-            self.logger.info('=' * 80)
-            self.call_epoch('Testing', test_set, self.test_epoch, **kwargs)
+            self.logger.info("=" * 80)
+            self.logger.info("Final Test Evaluation")
+            self.logger.info("=" * 80)
+            self.call_epoch("Testing", test_set, self.test_epoch, **kwargs)
             if self.model.loss:
                 test_loss = self.model.loss.value()["answer_class"]
-                self.logger.info(f'Test Loss: {test_loss:.6f}')
+                self.logger.info(f"Test Loss: {test_loss:.6f}")
             if self.model.metric and "argmax" in self.model.metric:
                 test_metrics = self.model.metric["argmax"].value()["answer_class"]
-                test_f1_dict = {k: v for k, v in test_metrics.items() if 'F1' in k}
-                self.logger.info('Test F1 Scores:')
+                test_f1_dict = {k: v for k, v in test_metrics.items() if "F1" in k}
+                self.logger.info("Test F1 Scores:")
                 for label, f1_score in test_f1_dict.items():
-                    self.logger.info(f'  {label}: {f1_score:.4f}')
+                    self.logger.info(f"  {label}: {f1_score:.4f}")
                 test_f1_values = list(test_f1_dict.values())
                 test_macro_f1 = sum(test_f1_values) / len(test_f1_values) if test_f1_values else 0.0
-                self.logger.info(f'Test Macro F1: {test_macro_f1:.4f}')
-            
-            self.logger.info('=' * 80)
+                self.logger.info(f"Test Macro F1: {test_macro_f1:.4f}")
 
-        results = {
-        'history': history,
-        'best_epoch': best_epoch,
-        'best_val_f1': best_f1
-        }
+            self.logger.info("=" * 80)
+
+        results = {"history": history, "best_epoch": best_epoch, "best_val_f1": best_f1}
 
         if test_set is not None:
-            results['test_loss'] =  test_loss
-            results['test_f1_macro'] = test_macro_f1
-            results['test_f1_per_class'] = test_f1_dict
+            results["test_loss"] = test_loss
+            results["test_f1_macro"] = test_macro_f1
+            results["test_f1_per_class"] = test_f1_dict
 
         # Reset epoch after everything
         self.epoch = None
@@ -420,7 +418,7 @@ class LearningBasedProgram():
     def test(self, dataset, device=None, **kwargs):
         if device is not None:
             self.to(device)
-        self.call_epoch('Testing', dataset, self.test_epoch, **kwargs)
+        self.call_epoch("Testing", dataset, self.test_epoch, **kwargs)
 
     def test_epoch(self, dataset):
         self.model.mode(Mode.TEST)
@@ -452,13 +450,14 @@ class LearningBasedProgram():
     def load(self, path, **kwargs):
         self.model.load_state_dict(torch.load(path, **kwargs))
 
-    def verifyResultsLC(self,data,constraint_names=None,device=None):
+    def verifyResultsLC(self, data, constraint_names=None, device=None):
         import numpy as np
-        datanode_ac,datanode_t=[],[]
+
+        datanode_ac, datanode_t = [], []
         all_ac, all_t = [], []
         ifl_ac, ifl_t = [], []
-        names=[]
-        FIRST=True
+        names = []
+        FIRST = True
         for datanode in self.populate(data, device=device):
             datanode.inferILPResults()
             verifyResult = datanode.verifyResultsLC()
@@ -489,31 +488,41 @@ class LearningBasedProgram():
                     if not names:
                         print("All the provided constraint names were wrong.")
                         return
-                FIRST=False
-            IF_exsits=False
-            for num,name in enumerate(names):
+                FIRST = False
+            IF_exsits = False
+            for num, name in enumerate(names):
                 if not np.isnan(verifyResult[name]["satisfied"]):
-                    datanode_ac[num]+=(verifyResult[name]['satisfied']==100.0)
-                    datanode_t[num] +=1
+                    datanode_ac[num] += verifyResult[name]["satisfied"] == 100.0
+                    datanode_t[num] += 1
                 if not np.isnan(verifyResult[name]["satisfied"]):
                     all_ac[num] += verifyResult[name]["satisfied"]
-                    all_t[num] +=1
+                    all_t[num] += 1
                 if "ifSatisfied" in verifyResult[name]:
-                    IF_exsits=True
+                    IF_exsits = True
                     if not np.isnan(verifyResult[name]["ifSatisfied"]):
                         ifl_ac[num] += verifyResult[name]["ifSatisfied"]
-                        ifl_t[num]+=1
+                        ifl_t[num] += 1
 
-        def zero_check(numerator,denominator):
-            if denominator==0:
+        def zero_check(numerator, denominator):
+            if denominator == 0:
                 return 0
-            return numerator/denominator
+            return numerator / denominator
 
         for num, name in enumerate(names):
-            print("Constraint name:",name,"datanode accuracy:",zero_check(datanode_ac[num],datanode_t[num])*100,"total accuracy:",zero_check(all_ac[num],all_t[num]))
-        print("Results for all constraints:\ndatanode accuracy:",zero_check(sum([i for i in datanode_ac])*100,(sum([i for i in datanode_t]))),
-                "\ntotal accuracy:",zero_check(sum([i for i in all_ac]),(sum([i for i in all_t]))))
+            print(
+                "Constraint name:",
+                name,
+                "datanode accuracy:",
+                zero_check(datanode_ac[num], datanode_t[num]) * 100,
+                "total accuracy:",
+                zero_check(all_ac[num], all_t[num]),
+            )
+        print(
+            "Results for all constraints:\ndatanode accuracy:",
+            zero_check(sum([i for i in datanode_ac]) * 100, (sum([i for i in datanode_t]))),
+            "\ntotal accuracy:",
+            zero_check(sum([i for i in all_ac]), (sum([i for i in all_t]))),
+        )
         if IF_exsits:
-            print("total accuracy ifL:",zero_check(sum([i for i in ifl_ac]),(sum([i for i in ifl_t]))))
+            print("total accuracy ifL:", zero_check(sum([i for i in ifl_ac]), (sum([i for i in ifl_t]))))
         return None
-
