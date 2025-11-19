@@ -115,6 +115,7 @@ def program_declaration_tb_dense_yn(
             beta=beta,
             metric={"ILP": PRF1Tracker(DatanodeCMMetric()), "argmax": PRF1Tracker(DatanodeCMMetric("local/argmax"))},
             device=device,
+            logger=logger,
         )
     elif sampling:
         program = SampleLossProgram(
