@@ -124,8 +124,8 @@ class Question(BaseModel):
                 question_id=id,
             )
         else:
-            template = get_temporal_question(intermediate_fact.relation)
-            question = template.substitute(event1=intermediate_fact.event1, event2=intermediate_fact.event2)
+            question = get_temporal_question(intermediate_fact.relation)
+            
             batch_question = BatchQuestion(
                 question_text=question,
                 story_text=article,
