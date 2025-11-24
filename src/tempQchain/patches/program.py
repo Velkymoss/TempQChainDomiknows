@@ -335,6 +335,8 @@ class LearningBasedProgram:
                 if val_macro_f1 >= best_f1:
                     best_epoch = self.epoch
                     best_f1 = val_macro_f1
+                    epochs_no_improve = 0 
+
 
                     if model_dir and best_model_name:
                         os.makedirs(model_dir, exist_ok=True)
