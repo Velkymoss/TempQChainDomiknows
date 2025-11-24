@@ -44,9 +44,9 @@ def main(args: Any) -> None:
     if args.use_mlflow:
         if not args.run_name:
             run_name = f"{args.model}_{datetime.now().strftime('%Y-%d-%m_%H:%M:%S')}"
-        logger.info(f"Starting run with id {run_name}")
+        logger.info(f"Starting run with id {args.run_name if args.run_name else run_name}")
         mlflow.set_experiment("Temporal_FR")
-        mlflow.start_run(run_name=run_name)
+        mlflow.start_run(run_name=args.run_name if args.run_name else run_name)
 
         mlflow.log_param("model", args.model)
         mlflow.log_param("learning_rate", args.lr)
