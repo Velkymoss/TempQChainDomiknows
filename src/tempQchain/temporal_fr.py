@@ -34,6 +34,12 @@ def main(args: Any) -> None:
     logger.info(f"Batch Size: {args.batch_size}")
     if args.constraints:
         logger.info("Using Constraints")
+        logger.info(f"Constraint learning rate: {args.c_lr}")
+        logger.info(f"Constraint warm up iterations: {args.c_warmup_iters}")
+        logger.info(f"Constraint update frequency increase: {args.c_freq_increase}")
+        logger.info(f"Constraint update frequency increase frequency: {args.c_freq_increase_freq}")
+        logger.info(f"Constraint learning rate decay strategy: {args.c_lr_decay}")
+        logger.info(f"Constraint learning rate decay parameter: {args.c_lr_decay_param}")
     if args.dropout:
         logger.info("Using Dropout")
     if args.pmd:
@@ -54,7 +60,16 @@ def main(args: Any) -> None:
         mlflow.log_param("batch_size", args.batch_size)
         mlflow.log_param("epochs", args.epoch)
         mlflow.log_param("patience", args.patience)
+
         mlflow.log_param("use_constraints", args.constraints)
+        if args.constraints:
+            mlflow.log_param("c_lr", args.c_lr)
+            mlflow.log_param("c_warmup_iters", args.c_warmup_iters)
+            mlflow.log_param("c_freq_increase", args.c_freq_increase)
+            mlflow.log_param("c_freq_increase_freq", args.c_freq_increase_freq)
+            mlflow.log_param("c_lr_decay", args.c_lr_decay)
+            mlflow.log_param("c_lr_decay_param", args.c_lr_decay_param)
+
         mlflow.log_param("use_dropout", args.dropout)
         mlflow.log_param("use_pmd", args.pmd)
         if args.pmd:
