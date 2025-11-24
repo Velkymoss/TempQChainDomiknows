@@ -106,6 +106,12 @@ def main(args: Any) -> None:
         model_dir=args.best_model_dir,
         best_model_name=args.best_model_name,
         # batch_size=args.batch_size,
+        c_lr=args.c_lr,
+        c_warmup_iters=args.c_warmup_iters,
+        c_freq_increase=args.c_freq_increase,
+        c_freq_increase_freq=args.c_freq_increase_freq,
+        c_lr_decay=args.c_lr_decay,
+        c_lr_decay_param=args.c_lr_decay_param,
     )
 
     history = results["history"]

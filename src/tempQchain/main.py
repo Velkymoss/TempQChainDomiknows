@@ -32,6 +32,12 @@ def temporal_fr(
     weight_decay: float = typer.Option(1e-3, help="Weight decay for AdamW"),
     batch_size: int = typer.Option(4, help="Batch size for training"),
     patience: int = typer.Option(3, help="Patience for early stopping"),
+    c_lr: float = typer.Option(0.05, help="Constraint learning rate"),
+    c_warmup_iters: int = typer.Option(10, help="Warm up iterations for constraint optimization"),
+    c_freq_increase: int = typer.Option(5, help="Update frequency of constrained lagrange multipliers"),
+    c_freq_increase_freq: int = typer.Option(1, help="Increase frequency of c_freq_increase"),
+    c_lr_decay: int = typer.Option(0, help="Index for constraint learning rate decay strategy"),
+    c_lr_decay_param: float = typer.Option(1.0, help="Decay parameter for constraint learning rate decay strategy"),
     # Data parameters
     data_path: str = typer.Option("data/", help="Path to the data folder"),
     # Model parameters
@@ -73,6 +79,12 @@ def temporal_fr(
         use_mlflow=use_mlflow,
         use_class_weights=use_class_weights,
         patience=patience,
+        c_lr=c_lr,
+        c_warmup_iters=c_warmup_iters,
+        c_freq_increase=c_freq_increase,
+        c_freq_increase_freq=c_freq_increase_freq,
+        c_lr_decay=c_lr_decay,
+        c_lr_decay_param=c_lr_decay_param,
     )
     temporal_fr.main(args)
 
@@ -86,6 +98,12 @@ def temporal_yn(
     weight_decay: float = typer.Option(1e-3, help="Weight decay for AdamW"),
     batch_size: int = typer.Option(4, help="Batch size for training"),
     patience: int = typer.Option(3, help="Patience for early stopping"),
+    c_lr: float = typer.Option(0.05, help="Constraint learning rate"),
+    c_warmup_iters: int = typer.Option(10, help="Warm up iterations for constraint optimization"),
+    c_freq_increase: int = typer.Option(5, help="Update frequency of constrained lagrange multipliers"),
+    c_freq_increase_freq: int = typer.Option(1, help="Increase frequency of c_freq_increase"),
+    c_lr_decay: int = typer.Option(0, help="Index for constraint learning rate decay strategy"),
+    c_lr_decay_param: float = typer.Option(1.0, help="Decay parameter for constraint learning rate decay strategy"),
     # Data parameters
     data_path: str = typer.Option("data/", help="Path to the data folder"),
     # Model parameters
@@ -127,6 +145,12 @@ def temporal_yn(
         use_mlflow=use_mlflow,
         use_class_weights=use_class_weights,
         patience=patience,
+        c_lr=c_lr,
+        c_warmup_iters=c_warmup_iters,
+        c_freq_increase=c_freq_increase,
+        c_freq_increase_freq=c_freq_increase_freq,
+        c_lr_decay=c_lr_decay,
+        c_lr_decay_param=c_lr_decay_param,
     )
     temporal_yn.main(args)
 
