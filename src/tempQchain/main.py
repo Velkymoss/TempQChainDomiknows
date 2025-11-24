@@ -27,7 +27,7 @@ def create_tb_dense(
 def temporal_fr(
     # Training parameters
     model: str = typer.Option("bert", help="Model used"),
-    epoch: int = typer.Option(1, help="Number of training epochs"),
+    epoch: int = typer.Option(10, help="Number of training epochs"),
     lr: float = typer.Option(1e-5, help="Learning rate"),
     weight_decay: float = typer.Option(1e-3, help="Weight decay for AdamW"),
     batch_size: int = typer.Option(4, help="Batch size for training"),
@@ -46,7 +46,7 @@ def temporal_fr(
     use_class_weights: bool = typer.Option(False, help="Enable class weights for training"),
     # Training method parameters
     pmd: bool = typer.Option(False, help="Use Primal Dual method"),
-    beta: float = typer.Option(0.5, help="Beta parameter for PMD"),
+    beta: float = typer.Option(1.0, help="Beta parameter for PMD"),
     sampling: bool = typer.Option(False, help="Use sampling loss"),
     sampling_size: int = typer.Option(1, help="Sampling size"),
     # Additional options
