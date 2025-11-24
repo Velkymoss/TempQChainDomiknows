@@ -42,7 +42,8 @@ def main(args: Any) -> None:
         logger.info(f"Using Sampling Loss with Size: {args.sampling_size}")
 
     if args.use_mlflow:
-        run_name = f"{args.model}_{datetime.now().strftime('%Y-%d-%m_%H:%M:%S')}"
+        if not args.run_name:
+            run_name = f"{args.model}_{datetime.now().strftime('%Y-%d-%m_%H:%M:%S')}"
         logger.info(f"Starting run with id {run_name}")
         mlflow.set_experiment("Temporal_FR")
         mlflow.start_run(run_name=run_name)

@@ -52,6 +52,7 @@ def temporal_fr(
     # Additional options
     cuda: int = typer.Option(0, help="CUDA device number (-1 for CPU)"),
     # Model loading/saving, experiment tracking
+    run_name: str = typer.Option(None, help="Run name used for MLflow"),
     best_model_name: str = typer.Option("best_model", help="File name to save model"),
     best_model_dir: str = typer.Option("models/", help="File name to save model"),
     use_mlflow: bool = typer.Option(False, help="Use MLflow for experiment tracking"),
@@ -85,6 +86,7 @@ def temporal_fr(
         c_freq_increase_freq=c_freq_increase_freq,
         c_lr_decay=c_lr_decay,
         c_lr_decay_param=c_lr_decay_param,
+        run_name=run_name,
     )
     temporal_fr.main(args)
 
@@ -118,6 +120,7 @@ def temporal_yn(
     # Additional options
     cuda: int = typer.Option(0, help="CUDA device number (-1 for CPU)"),
     # Model loading/saving, experiment tracking
+    run_name: str = typer.Option(None, help="Run name used for MLflow"),
     best_model_name: str = typer.Option("best_model", help="File name to save model"),
     best_model_dir: str = typer.Option("models/", help="File name to save model"),
     use_mlflow: bool = typer.Option(False, help="Use MLflow for experiment tracking"),
@@ -151,6 +154,7 @@ def temporal_yn(
         c_freq_increase_freq=c_freq_increase_freq,
         c_lr_decay=c_lr_decay,
         c_lr_decay_param=c_lr_decay_param,
+        run_name=run_name,
     )
     temporal_yn.main(args)
 
