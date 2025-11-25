@@ -91,7 +91,9 @@ class TestQuestion:
         assert len(facts) == 0
         assert constraint == ""
 
-    def test_create_batch_questions_no_chain(self, sample_story_with_facts, sample_question_ab):
+    def test_create_batch_questions_no_chain(
+        self, mock_get_batch_question_article, sample_story_with_facts, sample_question_ab
+    ):
         """Test creating batch questions when no reasoning chain exists."""
         questions, keys, next_id = sample_question_ab.create_batch_questions(sample_story_with_facts, 0, {})
 
@@ -100,7 +102,9 @@ class TestQuestion:
         assert questions[0].relation_info == ""
         assert next_id == 1
 
-    def test_create_batch_questions_with_chain(self, sample_story_with_facts, sample_question_ac):
+    def test_create_batch_questions_with_chain(
+        self, mock_get_batch_question_article, sample_story_with_facts, sample_question_ac
+    ):
         """Test creating batch questions with reasoning chain."""
         questions, keys, next_id = sample_question_ac.create_batch_questions(sample_story_with_facts, 0, {})
 
@@ -115,7 +119,7 @@ class TestQuestion:
 class TestStory:
     """Test Story model and batching logic."""
 
-    def test_create_batches_batch_size(self, sample_story_fr):
+    def test_create_batches_batch_size(self, mock_get_batch_question_article, sample_story_fr):
         """Test that batches respect size limit."""
         story = Story(**sample_story_fr)
         batches = story.create_batches_for_story(batch_size=2, question_type="FR")
@@ -143,7 +147,12 @@ class TestStory:
         assert total_questions == 0
 
     def test_add_intermediate_questions_for_existing(
-        self, sample_story_with_facts, batch_question_ac, batch_question_ab, batch_question_bc
+        self,
+        mock_get_batch_question_article,
+        sample_story_with_facts,
+        batch_question_ac,
+        batch_question_ab,
+        batch_question_bc,
     ):
         """Test adding intermediate questions to existing batch question."""
         story = sample_story_with_facts
@@ -197,7 +206,7 @@ class TestStory:
 class TestTemporalReader:
     """Test TemporalReader class."""
 
-    def test_create_batches(self, sample_TemporalReader_data):
+    def test_create_batches(self, mock_get_batch_question_article, sample_TemporalReader_data):
         """Test batch creation."""
         reader = TemporalReader(data=sample_TemporalReader_data, question_type="FR", batch_size=8)
         reader.create_batches()
@@ -205,7 +214,7 @@ class TestTemporalReader:
         assert len(reader.batches) > 0
         assert all(isinstance(q, BatchQuestion) for batch in reader.batches for q in batch)
 
-    def test_convert_to_domiknows_format(self, sample_TemporalReader_data):
+    def test_convert_to_domiknows_format(self, mock_get_batch_question_article, sample_TemporalReader_data):
         """Test DomiKnows format conversion."""
         reader = TemporalReader(data=sample_TemporalReader_data, question_type="FR", batch_size=8)
         reader.create_batches()
@@ -217,7 +226,7 @@ class TestTemporalReader:
         assert all("questions" in batch for batch in domiknows)
         assert all("@@" in batch["questions"] or len(batch["questions"]) > 0 for batch in domiknows)
 
-    def test_len_method(self, sample_TemporalReader_data):
+    def test_len_method(self, mock_get_batch_question_article, sample_TemporalReader_data):
         """Test __len__ returns total question count."""
         reader = TemporalReader(data=sample_TemporalReader_data, question_type="FR", batch_size=8)
         reader.create_batches()
@@ -236,10 +245,11 @@ class TestEdgeCases:
         assert len(reader.batches) == 0
         assert reader.get_statistics() == {}
 
-    def test_id_reuse_in_batch(self):
+    def test_id_reuse_in_batch(self, mock_get_batch_question_article):
         """Test that shared intermediate questions reuse IDs."""
         story_data = {
             "story": ["A", "B", "C"],
+            "identifier": "some_identifier",
             "questions": [
                 {
                     "q_id": 1,
@@ -272,10 +282,11 @@ class TestEdgeCases:
         # Should not have more unique IDs than one
         assert len(set(ids)) == 1
 
-    def test_batch_boundary_reset(self):
+    def test_batch_boundary_reset(self, mock_get_batch_question_article):
         """Test that IDs reset across batch boundaries."""
         story_data = {
             "story": ["Event"],
+            "identifier": "some_identifier",
             "questions": [
                 {
                     "q_id": i,

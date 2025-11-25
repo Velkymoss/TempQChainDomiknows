@@ -2,6 +2,15 @@ import pytest
 
 from tempQchain.readers.temporal_reader import BatchQuestion, Question, Story
 
+
+@pytest.fixture
+def mock_get_batch_question_article(monkeypatch):
+    """Mock get_batch_question_article to return a fixed string."""
+    monkeypatch.setattr(
+        "tempQchain.readers.temporal_reader.get_batch_question_article", lambda *args, **kwargs: "Mocked article text"
+    )
+
+
 # ============================================================================
 # Question Fixtures
 # ============================================================================
@@ -106,6 +115,7 @@ def sample_story_with_facts(sample_question_ac, sample_question_ab, sample_quest
     """Story with facts_info for reasoning chains."""
     story_data = {
         "story": ["Event A happened before event B. Event B happened before event C."],
+        "identifier": "some_identifier",
         "questions": [sample_question_ac, sample_question_ab, sample_question_bc],
         "facts_info": {
             "A:C": {
@@ -124,6 +134,7 @@ def sample_story_fr():
     """Story with FR questions."""
     return {
         "story": ["Event A. Event B. Event C."],
+        "identifier": "some_identifier",
         "questions": [
             {
                 "q_id": 1,
@@ -153,6 +164,7 @@ def sample_story_yn():
     """Story with YN questions."""
     return {
         "story": ["Event A. Event B. Event C."],
+        "identifier": "some_identifier",
         "questions": [
             {
                 "q_id": 1,
@@ -188,6 +200,7 @@ def sample_TemporalReader_data():
     return [
         {
             "story": ["Event A.", "Event B."],
+            "identifier": "some_identifier",
             "questions": [
                 {
                     "q_id": 1,
