@@ -13,7 +13,7 @@ from tempQchain.programs.program_fr import (
     program_declaration_tb_dense_fr,
 )
 from tempQchain.readers.temporal_reader import TemporalReader
-from tempQchain.utils import get_train_labels
+from tempQchain.utils import get_class_distribution, get_train_labels
 
 logger = get_logger(__name__)
 
@@ -91,6 +91,8 @@ def main(args: Any) -> None:
     training_set = TemporalReader.from_file(
         file_path=os.path.join(args.data_path, train_file), question_type="FR", batch_size=args.batch_size
     )
+    class_distribution = get_class_distribution(training_set)
+    logger.info(f"Train class distribution: {class_distribution}")
 
     if args.use_class_weights:
         train_labels = get_train_labels(training_set)
@@ -103,12 +105,16 @@ def main(args: Any) -> None:
     eval_set = TemporalReader.from_file(
         file_path=os.path.join(args.data_path, eval_file), question_type="FR", batch_size=args.batch_size
     )
+    class_distribution = get_class_distribution(eval_set)
+    logger.info(f"Validation class distribution: {class_distribution}")
 
     logger.info("Loading test data...")
     test_file = "tb_dense_test.json"
     test_set = TemporalReader.from_file(
         file_path=os.path.join(args.data_path, test_file), question_type="FR", batch_size=args.batch_size
     )
+    class_distribution = get_class_distribution(test_set)
+    logger.info(f"Test class distribution: {class_distribution}")
 
     program = program_declaration_tb_dense_fr(
         cur_device,
