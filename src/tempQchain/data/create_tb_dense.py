@@ -2,6 +2,7 @@ import os
 from statistics import mean
 
 import pandas as pd
+from sklearn.model_selection import train_test_split
 
 from tempQchain.data.utils import (
     build_data,
@@ -97,15 +98,12 @@ trans_rules = {  # rule 1
     # ("simultaneous", "vague"): ["vague"],
 }
 
-devDocs = [
+valDocs = [
     "APW19980227.0487.tml",
     "CNN19980223.1130.0960.tml",
     "NYT19980212.0019.tml",
     "PRI19980216.2000.0170.tml",
     "ed980111.1130.0089.tml",
-]
-
-testDocs = [
     "APW19980227.0489.tml",
     "APW19980227.0494.tml",
     "APW19980308.0201.tml",
@@ -120,8 +118,7 @@ testDocs = [
 
 def process_tb_dense(
     trans_rules: dict[tuple[str, str], list[str]] = trans_rules,
-    dev_docs: list[str] = devDocs,
-    test_docs: list[str] = testDocs,
+    val_docs: list[str] = valDocs,
     save_rules_to_file: bool = False,
     saving_path: str = "data/",
     augment_train: bool = False,
@@ -138,9 +135,8 @@ def process_tb_dense(
     tb_dense_docs = list(tb_dense_df.doc_id.unique())
     logger.info(f"There are {len(tb_dense_docs)} documents with {len(tb_dense_df)} relations in total.")
 
-    dev_docs = [doc.replace(".tml", "") for doc in dev_docs]
-    test_docs = [doc.replace(".tml", "") for doc in test_docs]
-    train_docs = [doc for doc in tb_dense_docs if doc not in dev_docs and doc not in test_docs]
+    val_docs = [doc.replace(".tml", "") for doc in val_docs]
+    train_docs = [doc for doc in tb_dense_docs if doc not in val_docs]
 
     # Replace relation abbreviations with full names
     rel = {
@@ -154,12 +150,24 @@ def process_tb_dense(
     tb_dense_df["relation"].replace(rel, inplace=True)
 
     train_df = tb_dense_df[tb_dense_df.doc_id.isin(train_docs)]
-    dev_df = tb_dense_df[tb_dense_df.doc_id.isin(dev_docs)]
-    test_df = tb_dense_df[tb_dense_df.doc_id.isin(test_docs)]
+    val_df = tb_dense_df[tb_dense_df.doc_id.isin(val_docs)]
+
+    # val_df_shuffled = val_df.sample(frac=1, random_state=42).reset_index(drop=True)
+    # split_idx = len(val_df_shuffled) // 2
+    # dev_df = val_df_shuffled.iloc[:split_idx]
+    # test_df = val_df_shuffled.iloc[split_idx:]
+
+    # Stratified split of val_df into dev and test sets
+    dev_df, test_df = train_test_split(
+        val_df, test_size=0.5, random_state=42, stratify=val_df["relation"], shuffle=True
+    )
 
     logger.info(f"Train data: {len(train_df)}")
+    logger.info(f"Val data: {len(val_df)}")
     logger.info(f"Dev data: {len(dev_df)}")
     logger.info(f"Test data: {len(test_df)}")
+    logger.info(f"Dev relation distribution:\n{dev_df['relation'].value_counts()}")
+    logger.info(f"Test relation distribution:\n{test_df['relation'].value_counts()}")
 
     for mode, df in [("train", train_df), ("dev", dev_df), ("test", test_df)]:
         logger.info(f"Processing {mode} data...")
