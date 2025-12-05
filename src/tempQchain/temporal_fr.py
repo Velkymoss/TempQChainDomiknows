@@ -29,7 +29,6 @@ def main(args: Any) -> None:
     
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-    torch.use_deterministic_algorithms(True)
 
     logger.info("Starting FR training...")
     logger.info(f"Model: {args.model}")

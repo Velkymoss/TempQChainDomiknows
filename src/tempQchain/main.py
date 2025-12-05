@@ -33,7 +33,7 @@ def temporal_fr(
     batch_size: int = typer.Option(16, help="Batch size for training"),
     patience: int = typer.Option(3, help="Patience for early stopping"),
     c_lr: float = typer.Option(0.05, help="Constraint learning rate"),
-    c_warmup_iters: int = typer.Option(10, help="Warm up iterations for constraint optimization"),
+    c_warmup_iters: int = typer.Option(543, help="Warm up iterations for constraint optimization"),
     c_freq_increase: int = typer.Option(5, help="Update frequency of constrained lagrange multipliers"),
     c_freq_increase_freq: int = typer.Option(1, help="Increase frequency of c_freq_increase"),
     c_lr_decay: int = typer.Option(4, help="Index for constraint learning rate decay strategy"),
