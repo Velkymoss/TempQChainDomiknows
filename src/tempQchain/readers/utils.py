@@ -127,9 +127,6 @@ def get_clean_article(article_soup: BeautifulSoup, event_1: str, event_2: str) -
 
 
 def get_batch_question_article(identifier: str, event_1: str, event_2: str, context_size: int = 1) -> str:
-    dummy = True
-    if dummy:
-        return "A story."
     article_soup = parse_article(os.path.join(ARTICLE_PATH, identifier + ".tml"))
     sentences = get_clean_article(article_soup, event_1, event_2)
 
