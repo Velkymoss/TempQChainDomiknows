@@ -19,7 +19,7 @@ logger = get_logger(__name__)
 
 
 def main(args: Any) -> None:
-    SEED = 382
+    SEED = args.seed
     np.random.seed(SEED)
     random.seed(SEED)
     torch.manual_seed(SEED)
@@ -53,9 +53,12 @@ def main(args: Any) -> None:
     if args.sampling:
         logger.info(f"Using Sampling Loss with Size: {args.sampling_size}")
 
+    if args.constraints and not args.run_name:
+        run_name = f"{args.model}_seed_{args.seed}_constraints_c-freq-inc_{args.c_freq_increase}_c-lr-decay-param_{args.c_lr_decay_param}_c-lr_{args.c_lr}"
+    else:
+        run_name = f"{args.model}_seed_{args.seed}_{datetime.now().strftime('%Y-%d-%m_%H:%M:%S')}_"
+
     if args.use_mlflow:
-        if not args.run_name:
-            run_name = f"{args.model}_{datetime.now().strftime('%Y-%d-%m_%H:%M:%S')}"
         logger.info(f"Starting run with id {args.run_name if args.run_name else run_name}")
         mlflow.set_experiment("Temporal_FR")
         mlflow.start_run(run_name=args.run_name if args.run_name else run_name)
@@ -142,7 +145,7 @@ def main(args: Any) -> None:
         patience=args.patience,
         device=cur_device,
         model_dir=args.best_model_dir,
-        best_model_name=args.best_model_name,
+        best_model_name=args.run_name if args.run_name else run_name,
         # batch_size=args.batch_size,
         c_lr=args.c_lr,
         c_warmup_iters=args.c_warmup_iters,

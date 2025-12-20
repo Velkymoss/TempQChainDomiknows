@@ -26,6 +26,7 @@ def create_tb_dense(
 @app.command()
 def temporal_fr(
     # Training parameters
+    seed: int = typer.Option(42, help="Seed value used for experiment"),
     model: str = typer.Option("bert", help="Model used"),
     epoch: int = typer.Option(10, help="Number of training epochs"),
     lr: float = typer.Option(1e-5, help="Learning rate"),
@@ -62,6 +63,7 @@ def temporal_fr(
     import tempQchain.temporal_fr as temporal_fr
 
     args = argparse.Namespace(
+        seed=seed,
         model=model,
         epoch=epoch,
         lr=lr,
@@ -94,6 +96,7 @@ def temporal_fr(
 @app.command()
 def temporal_yn(
     # Training parameters
+    seed: int = typer.Option(42, help="Seed value used for experiment"),
     model: str = typer.Option("bert", help="Model used"),
     epoch: int = typer.Option(1, help="Number of training epochs"),
     lr: float = typer.Option(1e-5, help="Learning rate"),
@@ -121,7 +124,7 @@ def temporal_yn(
     cuda: int = typer.Option(0, help="CUDA device number (-1 for CPU)"),
     # Model loading/saving, experiment tracking
     run_name: str = typer.Option(None, help="Run name used for MLflow"),
-    best_model_name: str = typer.Option("best_model", help="File name to save model"),
+    best_model_name: str = typer.Option(None, help="File name to save model"),
     best_model_dir: str = typer.Option("models/", help="File name to save model"),
     use_mlflow: bool = typer.Option(False, help="Use MLflow for experiment tracking"),
 ):
@@ -130,6 +133,7 @@ def temporal_yn(
     import tempQchain.temporal_yn as temporal_yn
 
     args = argparse.Namespace(
+        seed=seed,
         model=model,
         epoch=epoch,
         lr=lr,
