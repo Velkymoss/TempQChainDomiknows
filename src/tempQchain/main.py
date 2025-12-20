@@ -54,7 +54,7 @@ def temporal_fr(
     cuda: int = typer.Option(0, help="CUDA device number (-1 for CPU)"),
     # Model loading/saving, experiment tracking
     run_name: str = typer.Option(None, help="Run name used for MLflow"),
-    best_model_name: str = typer.Option("best_model", help="File name to save model"),
+    best_model_name: str = typer.Option(None, help="File name to save model"),
     best_model_dir: str = typer.Option("models/", help="File name to save model"),
     use_mlflow: bool = typer.Option(False, help="Use MLflow for experiment tracking"),
 ):
