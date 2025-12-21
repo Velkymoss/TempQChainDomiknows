@@ -53,9 +53,8 @@ def temporal_fr(
     # Additional options
     cuda: int = typer.Option(0, help="CUDA device number (-1 for CPU)"),
     # Model loading/saving, experiment tracking
-    run_name: str = typer.Option(None, help="Run name used for MLflow"),
-    best_model_name: str = typer.Option(None, help="File name to save model"),
-    best_model_dir: str = typer.Option("models/", help="File name to save model"),
+    run_name: str = typer.Option(None, help="Run name used for MLflow and saved model"),
+    best_model_dir: str = typer.Option("models/", help="Directory name to save model"),
     use_mlflow: bool = typer.Option(False, help="Use MLflow for experiment tracking"),
 ):
     import argparse
@@ -77,7 +76,6 @@ def temporal_fr(
         sampling=sampling,
         sampling_size=sampling_size,
         constraints=constraints,
-        best_model_name=best_model_name,
         best_model_dir=best_model_dir,
         use_mlflow=use_mlflow,
         use_class_weights=use_class_weights,
@@ -123,9 +121,8 @@ def temporal_yn(
     # Additional options
     cuda: int = typer.Option(0, help="CUDA device number (-1 for CPU)"),
     # Model loading/saving, experiment tracking
-    run_name: str = typer.Option(None, help="Run name used for MLflow"),
-    best_model_name: str = typer.Option(None, help="File name to save model"),
-    best_model_dir: str = typer.Option("models/", help="File name to save model"),
+    run_name: str = typer.Option(None, help="Run name used for MLflow and saved model"),
+    best_model_dir: str = typer.Option("models/", help="Directory name to save model"),
     use_mlflow: bool = typer.Option(False, help="Use MLflow for experiment tracking"),
 ):
     import argparse
@@ -147,7 +144,6 @@ def temporal_yn(
         sampling=sampling,
         sampling_size=sampling_size,
         constraints=constraints,
-        best_model_name=best_model_name,
         best_model_dir=best_model_dir,
         use_mlflow=use_mlflow,
         use_class_weights=use_class_weights,

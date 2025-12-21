@@ -56,7 +56,7 @@ def main(args: Any) -> None:
     if args.constraints and not args.run_name:
         run_name = f"{args.model}_seed_{args.seed}_constraints_c-freq-inc_{args.c_freq_increase}_c-lr-decay-param_{args.c_lr_decay_param}_c-lr_{args.c_lr}"
     else:
-        run_name = f"{args.model}_seed_{args.seed}_{datetime.now().strftime('%Y-%d-%m_%H:%M:%S')}_"
+        run_name = f"{args.model}_seed_{args.seed}_{datetime.now().strftime('%Y-%d-%m_%H:%M:%S')}"
 
     if args.use_mlflow:
         logger.info(f"Starting run with id {args.run_name if args.run_name else run_name}")
@@ -168,7 +168,7 @@ def main(args: Any) -> None:
         mlflow.log_metric("best_epoch", results["best_epoch"])
         mlflow.log_metric("best_val_f1", results["best_val_f1"])
 
-        best_model_path = os.path.join(args.best_model_dir, args.best_model_name)
+        best_model_path = os.path.join(args.best_model_dir, args.run_name if args.run_name else run_name)
         mlflow.log_artifact(best_model_path)
 
         if "test_loss" in results:
