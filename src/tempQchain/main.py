@@ -26,17 +26,18 @@ def create_tb_dense(
 @app.command()
 def temporal_fr(
     # Training parameters
+    seed: int = typer.Option(42, help="Seed value used for experiment"),
     model: str = typer.Option("bert", help="Model used"),
     epoch: int = typer.Option(10, help="Number of training epochs"),
     lr: float = typer.Option(1e-5, help="Learning rate"),
     weight_decay: float = typer.Option(1e-3, help="Weight decay for AdamW"),
     batch_size: int = typer.Option(16, help="Batch size for training"),
-    patience: int = typer.Option(5, help="Patience for early stopping"),
-    c_lr: float = typer.Option(0.01, help="Constraint learning rate"),
-    c_warmup_iters: int = typer.Option(150, help="Warm up iterations for constraint optimization"),
-    c_freq_increase: int = typer.Option(1, help="Update frequency of constrained lagrange multipliers"),
-    c_freq_increase_freq: int = typer.Option(5, help="Increase frequency of c_freq_increase"),
-    c_lr_decay: int = typer.Option(0, help="Index for constraint learning rate decay strategy"),
+    patience: int = typer.Option(3, help="Patience for early stopping"),
+    c_lr: float = typer.Option(0.05, help="Constraint learning rate"),
+    c_warmup_iters: int = typer.Option(543, help="Warm up iterations for constraint optimization"),
+    c_freq_increase: int = typer.Option(5, help="Update frequency of constrained lagrange multipliers"),
+    c_freq_increase_freq: int = typer.Option(1, help="Increase frequency of c_freq_increase"),
+    c_lr_decay: int = typer.Option(4, help="Index for constraint learning rate decay strategy"),
     c_lr_decay_param: float = typer.Option(1.0, help="Decay parameter for constraint learning rate decay strategy"),
     # Data parameters
     data_path: str = typer.Option("data/", help="Path to the data folder"),
@@ -52,9 +53,8 @@ def temporal_fr(
     # Additional options
     cuda: int = typer.Option(0, help="CUDA device number (-1 for CPU)"),
     # Model loading/saving, experiment tracking
-    run_name: str = typer.Option(None, help="Run name used for MLflow"),
-    best_model_name: str = typer.Option("best_model", help="File name to save model"),
-    best_model_dir: str = typer.Option("models/", help="File name to save model"),
+    run_name: str = typer.Option(None, help="Run name used for MLflow and saved model"),
+    best_model_dir: str = typer.Option("models/", help="Directory name to save model"),
     use_mlflow: bool = typer.Option(False, help="Use MLflow for experiment tracking"),
 ):
     import argparse
@@ -62,6 +62,7 @@ def temporal_fr(
     import tempQchain.temporal_fr as temporal_fr
 
     args = argparse.Namespace(
+        seed=seed,
         model=model,
         epoch=epoch,
         lr=lr,
@@ -75,7 +76,6 @@ def temporal_fr(
         sampling=sampling,
         sampling_size=sampling_size,
         constraints=constraints,
-        best_model_name=best_model_name,
         best_model_dir=best_model_dir,
         use_mlflow=use_mlflow,
         use_class_weights=use_class_weights,
@@ -94,6 +94,7 @@ def temporal_fr(
 @app.command()
 def temporal_yn(
     # Training parameters
+    seed: int = typer.Option(42, help="Seed value used for experiment"),
     model: str = typer.Option("bert", help="Model used"),
     epoch: int = typer.Option(1, help="Number of training epochs"),
     lr: float = typer.Option(1e-5, help="Learning rate"),
@@ -120,9 +121,8 @@ def temporal_yn(
     # Additional options
     cuda: int = typer.Option(0, help="CUDA device number (-1 for CPU)"),
     # Model loading/saving, experiment tracking
-    run_name: str = typer.Option(None, help="Run name used for MLflow"),
-    best_model_name: str = typer.Option("best_model", help="File name to save model"),
-    best_model_dir: str = typer.Option("models/", help="File name to save model"),
+    run_name: str = typer.Option(None, help="Run name used for MLflow and saved model"),
+    best_model_dir: str = typer.Option("models/", help="Directory name to save model"),
     use_mlflow: bool = typer.Option(False, help="Use MLflow for experiment tracking"),
 ):
     import argparse
@@ -130,6 +130,7 @@ def temporal_yn(
     import tempQchain.temporal_yn as temporal_yn
 
     args = argparse.Namespace(
+        seed=seed,
         model=model,
         epoch=epoch,
         lr=lr,
@@ -143,7 +144,6 @@ def temporal_yn(
         sampling=sampling,
         sampling_size=sampling_size,
         constraints=constraints,
-        best_model_name=best_model_name,
         best_model_dir=best_model_dir,
         use_mlflow=use_mlflow,
         use_class_weights=use_class_weights,
