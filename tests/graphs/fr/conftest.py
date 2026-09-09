@@ -3,7 +3,10 @@ from typing import Sequence
 import torch
 from domiknows.sensor.pytorch.learners import TorchLearner
 
+from tempQchain.logger import get_logger
 from tests.graphs.conftest import str_to_int_list
+
+logger = get_logger(__name__)
 
 
 class FrSpecificDummyLearner(TorchLearner):
@@ -25,8 +28,9 @@ class FrSpecificDummyLearner(TorchLearner):
         *pre,
         predictions: list[int],
         num_labels: int,
-        high_score: float = 1000.0,
-        low_score: float = -1000.0,
+        high_score: float = 500.0,
+        low_score: float = -500.0,
+        logit_weight_conclusion: float = 1.0,
         device=None,
     ):
         TorchLearner.__init__(self, *pre)
@@ -34,6 +38,7 @@ class FrSpecificDummyLearner(TorchLearner):
         self.num_labels = num_labels
         self.high_score = high_score
         self.low_score = low_score
+        self.logit_weight_conclusion = logit_weight_conclusion
         self.device = device
 
     def forward(self, x: Sequence) -> torch.Tensor:
@@ -49,6 +54,10 @@ class FrSpecificDummyLearner(TorchLearner):
                 result[i, :] = 0
             elif 0 <= pred_idx < self.num_labels:
                 result[i, pred_idx] = self.high_score
+
+            if self.logit_weight_conclusion != 1.0 and i == 2:
+                result[i, :] *= self.logit_weight_conclusion
+        logger.info(f"Dummy learner logits: \n{result}")
         return result
 
 
