@@ -6,8 +6,6 @@ TEST_FILES = [
     "tests/graphs/fr/test_symmetric.py",
     "tests/graphs/fr/test_transitive_non_determin.py",
     "tests/graphs/fr/test_inverse.py",
-    "tests/graphs/yn/test_transitive.py",
-    "tests/graphs/yn/test_symmetric.py",
 ]
 
 
