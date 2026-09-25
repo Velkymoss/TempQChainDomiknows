@@ -3,12 +3,17 @@ from domiknows.program import SolverPOIProgram
 from domiknows.sensor.pytorch.relation_sensors import CompositionCandidateSensor
 from domiknows.sensor.pytorch.sensors import JointSensor, ReaderSensor
 
-from tests.graphs.conftest import assert_ilp_result, assert_local_softmax, check_inverse
-from tests.graphs.fr.conftest import FrSpecificDummyLearner, make_question
-from tests.graphs.fr.graph import get_graph
+from tests.graphs.conftest import (
+    FrSpecificDummyLearner,
+    assert_ilp_result,
+    assert_local_softmax,
+    check_transitive,
+    make_question,
+)
+from tests.graphs.graph import get_graph
 
 
-def test_inverse(device):
+def test_transitive(device):
     (
         graph,
         story,
@@ -22,15 +27,15 @@ def test_inverse(device):
         tran_quest3,
         inv_quest1,
         inv_quest2,
-    ) = get_graph(inverse_relation=True)
+    ) = get_graph(transitive_non_determin=True)
 
     synthetic_dataset = [
         {
-            "questions": "When did e1 happen in time compared to e2?@@When did e2 happen in time compared to e1?",
-            "stories": "story@@story",
-            "relation": "@@inverse,0",
-            "question_ids": "0@@1",
-            "labels": "1@@0",  # before (1) and after (0)
+            "questions": "A B?@@B C?@@A C?",
+            "stories": "story@@story@@story",
+            "relation": "@@@@transitive,0,1",
+            "question_ids": "0@@1@@2",
+            "labels": "1@@2@@5",
         }
     ]
 
@@ -50,16 +55,15 @@ def test_inverse(device):
         device=device,
     )
 
-    # Predict both as before (1) - ILP should correct second to after (0)
-    question[answer_class] = FrSpecificDummyLearner(story_contain, num_labels=6, predictions=[1, -1], device=device)
+    question[answer_class] = FrSpecificDummyLearner(story_contain, num_labels=6, predictions=[1, 2, -1], device=device)
 
-    inverse[inv_quest1.reversed, inv_quest2.reversed] = CompositionCandidateSensor(
-        relations=(inv_quest1.reversed, inv_quest2.reversed),
-        forward=check_inverse,
+    transitive[tran_quest1.reversed, tran_quest2.reversed, tran_quest3.reversed] = CompositionCandidateSensor(
+        relations=(tran_quest1.reversed, tran_quest2.reversed, tran_quest3.reversed),
+        forward=check_transitive,
         device=device,
     )
 
-    poi_list = [question, answer_class, inverse]
+    poi_list = [question, answer_class, transitive]
 
     program = SolverPOIProgram(graph=graph, poi=poi_list, device=device)
 
@@ -72,6 +76,10 @@ def test_inverse(device):
             if i == 0:
                 assert_local_softmax(
                     q_node, answer_class, torch.tensor([0.0, 1.0, 0.0, 0.0, 0.0, 0.0], device=device), device=device
+                )
+            elif i == 1:
+                assert_local_softmax(
+                    q_node, answer_class, torch.tensor([0.0, 0.0, 1.0, 0.0, 0.0, 0.0], device=device), device=device
                 )
             else:
                 assert_local_softmax(
@@ -89,10 +97,23 @@ def test_inverse(device):
         for i, q_node in enumerate(datanode.getChildDataNodes()):
             print(f"\nQuestion {i}:")
             print(f"Inferred constraint: {q_node.getAttribute(answer_class, 'ILP')}")
+            if i == 0:
+                assert_ilp_result(
+                    q_node, answer_class, torch.tensor([0.0, 1.0, 0.0, 0.0, 0.0, 0.0], device=device), device=device
+                )
+            elif i == 1:
+                assert_ilp_result(
+                    q_node, answer_class, torch.tensor([0.0, 0.0, 1.0, 0.0, 0.0, 0.0], device=device), device=device
+                )
+            else:
+                result = q_node.getAttribute(answer_class, "ILP")
+                if device is not None:
+                    result = result.to(device)
 
-            expected = (
-                torch.tensor([0.0, 1.0, 0.0, 0.0, 0.0, 0.0], device=device)
-                if i == 0
-                else torch.tensor([1.0, 0.0, 0.0, 0.0, 0.0, 0.0], device=device)
-            )
-            assert_ilp_result(q_node, answer_class, expected, device=device)
+                indices = [1, 2, 5]
+                assert torch.any(torch.isclose(result[indices], torch.tensor(1.0, device=device))), (
+                    f"Expected one of indices {indices} to be 1. Got: {result[indices]}"
+                )
+                assert torch.isclose(result.sum(), torch.tensor(1.0, device=device), atol=1e-4), (
+                    f"Inferred results should sum to 1, got {result.sum()}"
+                )

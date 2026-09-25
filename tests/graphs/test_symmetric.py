@@ -3,12 +3,17 @@ from domiknows.program import SolverPOIProgram
 from domiknows.sensor.pytorch.relation_sensors import CompositionCandidateSensor
 from domiknows.sensor.pytorch.sensors import JointSensor, ReaderSensor
 
-from tests.graphs.conftest import assert_ilp_result, assert_local_softmax, check_transitive
-from tests.graphs.fr.conftest import FrSpecificDummyLearner, make_question
-from tests.graphs.fr.graph import get_graph
+from tests.graphs.conftest import (
+    FrSpecificDummyLearner,
+    assert_ilp_result,
+    assert_local_softmax,
+    check_symmetric,
+    make_question,
+)
+from tests.graphs.graph import get_graph
 
 
-def test_transitive(device):
+def test_symmetric(device):
     (
         graph,
         story,
@@ -22,15 +27,15 @@ def test_transitive(device):
         tran_quest3,
         inv_quest1,
         inv_quest2,
-    ) = get_graph(transitive_determin=True)
+    ) = get_graph(symmetric=True)
 
     synthetic_dataset = [
         {
-            "questions": "A B?@@B C?@@A C?",
-            "stories": "story@@story@@story",
-            "relation": "@@@@transitive,0,1",
-            "question_ids": "0@@1@@2",
-            "labels": "0@@0@@0",
+            "questions": "When did t21 happen in time compared to e1?@@When did e1 happen in time compared to t21?",
+            "stories": "story@@story",
+            "relation": "@@symmetric,0",
+            "question_ids": "0@@1",
+            "labels": "4@@4",
         }
     ]
 
@@ -50,15 +55,15 @@ def test_transitive(device):
         device=device,
     )
 
-    question[answer_class] = FrSpecificDummyLearner(story_contain, num_labels=6, predictions=[0, 0, -1], device=device)
+    question[answer_class] = FrSpecificDummyLearner(story_contain, num_labels=6, predictions=[4, -1], device=device)
 
-    transitive[tran_quest1.reversed, tran_quest2.reversed, tran_quest3.reversed] = CompositionCandidateSensor(
-        relations=(tran_quest1.reversed, tran_quest2.reversed, tran_quest3.reversed),
-        forward=check_transitive,
+    inverse[inv_quest1.reversed, inv_quest2.reversed] = CompositionCandidateSensor(
+        relations=(inv_quest1.reversed, inv_quest2.reversed),
+        forward=check_symmetric,
         device=device,
     )
 
-    poi_list = [question, answer_class, transitive]
+    poi_list = [question, answer_class, inverse]
 
     program = SolverPOIProgram(graph=graph, poi=poi_list, device=device)
 
@@ -68,9 +73,9 @@ def test_transitive(device):
         for i, q_node in enumerate(datanode.getChildDataNodes()):
             print(f"\nQuestion {i}:")
             print(f"  Dummy Prediction: {q_node.getAttribute(answer_class, 'local/softmax')}")
-            if i == 0 or i == 1:
+            if i == 0:
                 assert_local_softmax(
-                    q_node, answer_class, torch.tensor([1.0, 0.0, 0.0, 0.0, 0.0, 0.0], device=device), device=device
+                    q_node, answer_class, torch.tensor([0.0, 0.0, 0.0, 0.0, 1.0, 0.0], device=device), device=device
                 )
             else:
                 assert_local_softmax(
@@ -90,5 +95,5 @@ def test_transitive(device):
             print(f"Inferred constraint: {q_node.getAttribute(answer_class, 'ILP')}")
 
             assert_ilp_result(
-                q_node, answer_class, torch.tensor([1.0, 0.0, 0.0, 0.0, 0.0, 0.0], device=device), device=device
+                q_node, answer_class, torch.tensor([0.0, 0.0, 0.0, 0.0, 1.0, 0.0], device=device), device=device
             )

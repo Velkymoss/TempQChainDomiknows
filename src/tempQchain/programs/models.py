@@ -20,7 +20,7 @@ class BERTTokenizer:
 
 
 class Bert(nn.Module):
-    def __init__(self, num_classes=6, drp=False, device="cpu", tokenizer=None):
+    def __init__(self, num_classes=6, disable_dropout=False, device="cpu", tokenizer=None):
         super().__init__()
 
         self.device = device
@@ -33,7 +33,7 @@ class Bert(nn.Module):
             self.register_buffer("e2_start_id", torch.tensor(tokenizer.convert_tokens_to_ids("<e2>")))
             self.register_buffer("e2_end_id", torch.tensor(tokenizer.convert_tokens_to_ids("</e2>")))
 
-        dropout_prob = 0.0 if drp else self.bert.config.hidden_dropout_prob
+        dropout_prob = 0.0 if disable_dropout else self.bert.config.hidden_dropout_prob
         self.dropout = nn.Dropout(dropout_prob)
         self.hidden_size = self.bert.config.hidden_size
         self.num_classes = num_classes

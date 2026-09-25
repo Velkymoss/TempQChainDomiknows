@@ -2,10 +2,10 @@ import subprocess
 import sys
 
 TEST_FILES = [
-    "tests/graphs/fr/test_transitive_determin.py",
-    "tests/graphs/fr/test_symmetric.py",
-    "tests/graphs/fr/test_transitive_non_determin.py",
-    "tests/graphs/fr/test_inverse.py",
+    "tests/graphs/test_transitive_determin.py",
+    "tests/graphs/test_symmetric.py",
+    "tests/graphs/test_transitive_non_determin.py",
+    "tests/graphs/test_inverse.py",
 ]
 
 

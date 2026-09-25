@@ -30,7 +30,7 @@ dependencies = [
 ]
 
 [project.scripts]
-q-chain = "tempQchain.main:app"
+tempqchain = "tempQchain.main:app"
 
 
 [tool.pytest.ini_options]

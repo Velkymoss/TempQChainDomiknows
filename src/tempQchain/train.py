@@ -136,7 +136,7 @@ def main(args: Any) -> None:
         beta=args.beta,
         sampling=args.sampling,
         sampleSize=args.sampling_size,
-        dropout=args.dropout,
+        disable_dropout=args.disable_dropout,
         constraints=args.constraints,
         class_weights=class_weights if args.use_class_weights else None,
         transitive_enabled=args.transitive_enabled,

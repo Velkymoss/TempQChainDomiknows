@@ -39,12 +39,33 @@ def program_declaration_tb_dense(
     beta: float = 0.5,
     sampling: bool = False,
     sampleSize: int = 10,
-    dropout: bool = False,
+    disable_dropout: bool = False,
     constraints: bool = False,
     class_weights: torch.FloatTensor = None,
     transitive_enabled: bool = True,
     inverse_enabled: bool = True,
 ) -> LearningBasedProgram:
+    """
+    Creates a learning-based program for temporal relation extraction.
+
+    Args:
+        device: The PyTorch device (cpu or cuda) to run the program on.
+        pmd: If True, uses Primal-Dual training mode.
+        beta: Weighting factor for the primal-dual loss (used only when pmd=True). Default: 0.5.
+        sampling: If True, uses sampling-based training mode.
+        sampleSize: Number of samples per batch when sampling=True. Default: 10.
+        disable_dropout: If True, sets dropout in the BERT classifier to 0.0. Default: False.
+        constraints: If True, enables training with transitive and/or inverse/symmetric constraints.
+        class_weights: Optional tensor of class weights for the negative binary cross-entropy loss.
+        transitive_enabled: If True and constraints=True, enables transitive constraint checking.
+            Only applies when constraints=True. Default: True.
+        inverse_enabled: If True and constraints=True, enables inverse/symmetric constraint checking.
+            Only applies when constraints=True. Default: True.
+
+    Returns:
+        A LearningBasedProgram for training and inference
+    """
+
     program = None
 
     story["questions"] = ReaderSensor(keyword="questions")
@@ -88,7 +109,10 @@ def program_declaration_tb_dense(
         story_contain, "question", "story", forward=tokenizer, device=device
     )
     classifier = Bert(
-        device="cuda" if torch.cuda.is_available() else "cpu", drp=dropout, num_classes=6, tokenizer=tokenizer.tokenizer
+        device="cuda" if torch.cuda.is_available() else "cpu",
+        disable_dropout=disable_dropout,
+        num_classes=6,
+        tokenizer=tokenizer.tokenizer,
     )
     question[answer_class] = ModuleLearner("input_ids", "attention_mask", module=classifier, device=device)
 

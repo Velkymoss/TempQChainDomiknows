@@ -42,7 +42,7 @@ def train_model(
     # Data parameters
     data_path: str = typer.Option("data/", help="Path to the data folder"),
     # Model parameters
-    dropout: bool = typer.Option(False, help="Enable dropout"),
+    disable_dropout: bool = typer.Option(False, help="Disable dropout"),
     constraints: bool = typer.Option(False, help="Enable constraints"),
     transitive_enabled: bool = typer.Option(True, help="Enable transitive constraints"),
     inverse_enabled: bool = typer.Option(True, help="Enable inverse constraints"),
@@ -61,6 +61,8 @@ def train_model(
     best_model_dir: str = typer.Option("models/", help="Directory name to save model"),
     use_mlflow: bool = typer.Option(False, help="Use MLflow for experiment tracking"),
 ):
+    """Train a model for temporal relation extraction."""
+
     import argparse
 
     import tempQchain.train as train
@@ -74,7 +76,7 @@ def train_model(
         cuda=cuda,
         batch_size=batch_size,
         data_path=data_path,
-        dropout=dropout,
+        disable_dropout=disable_dropout,
         pmd=pmd,
         beta=beta,
         sampling=sampling,
@@ -108,7 +110,7 @@ def constraint_analysis(
     # Data parameters
     data_path: str = typer.Option("data/", help="Path to the data folder"),
     # Model parameters
-    dropout: bool = typer.Option(False, help="Enable dropout"),
+    disable_dropout: bool = typer.Option(False, help="Disable dropout"),
     constraints: bool = typer.Option(True, help="Enable constraints"),
     transitive_enabled: bool = typer.Option(True, help="Enable transitive constraints"),
     inverse_enabled: bool = typer.Option(True, help="Enable inverse constraints"),
@@ -123,6 +125,7 @@ def constraint_analysis(
         "final_chain_questions.json", help="Path to save the extracted chain questions as a JSON array"
     ),
 ):
+    """Perform inference and constraint analysis on a trained model for temporal relation extraction."""
     import argparse
 
     import tempQchain.constraint_analysis as constraint_analysis
@@ -132,7 +135,7 @@ def constraint_analysis(
         model=model,
         batch_size=batch_size,
         data_path=data_path,
-        dropout=dropout,
+        disable_dropout=disable_dropout,
         constraints=constraints,
         transitive_enabled=transitive_enabled,
         inverse_enabled=inverse_enabled,

@@ -3,12 +3,17 @@ from domiknows.program import SolverPOIProgram
 from domiknows.sensor.pytorch.relation_sensors import CompositionCandidateSensor
 from domiknows.sensor.pytorch.sensors import JointSensor, ReaderSensor
 
-from tests.graphs.conftest import assert_ilp_result, assert_local_softmax, check_symmetric
-from tests.graphs.fr.conftest import FrSpecificDummyLearner, make_question
-from tests.graphs.fr.graph import get_graph
+from tests.graphs.conftest import (
+    FrSpecificDummyLearner,
+    assert_ilp_result,
+    assert_local_softmax,
+    check_inverse,
+    make_question,
+)
+from tests.graphs.graph import get_graph
 
 
-def test_symmetric(device):
+def test_inverse(device):
     (
         graph,
         story,
@@ -22,15 +27,15 @@ def test_symmetric(device):
         tran_quest3,
         inv_quest1,
         inv_quest2,
-    ) = get_graph(symmetric=True)
+    ) = get_graph(inverse_relation=True)
 
     synthetic_dataset = [
         {
-            "questions": "When did t21 happen in time compared to e1?@@When did e1 happen in time compared to t21?",
+            "questions": "When did e1 happen in time compared to e2?@@When did e2 happen in time compared to e1?",
             "stories": "story@@story",
-            "relation": "@@symmetric,0",
+            "relation": "@@inverse,0",
             "question_ids": "0@@1",
-            "labels": "4@@4",
+            "labels": "1@@0",  # before (1) and after (0)
         }
     ]
 
@@ -50,11 +55,12 @@ def test_symmetric(device):
         device=device,
     )
 
-    question[answer_class] = FrSpecificDummyLearner(story_contain, num_labels=6, predictions=[4, -1], device=device)
+    # Predict both as before (1) - ILP should correct second to after (0)
+    question[answer_class] = FrSpecificDummyLearner(story_contain, num_labels=6, predictions=[1, -1], device=device)
 
     inverse[inv_quest1.reversed, inv_quest2.reversed] = CompositionCandidateSensor(
         relations=(inv_quest1.reversed, inv_quest2.reversed),
-        forward=check_symmetric,
+        forward=check_inverse,
         device=device,
     )
 
@@ -70,7 +76,7 @@ def test_symmetric(device):
             print(f"  Dummy Prediction: {q_node.getAttribute(answer_class, 'local/softmax')}")
             if i == 0:
                 assert_local_softmax(
-                    q_node, answer_class, torch.tensor([0.0, 0.0, 0.0, 0.0, 1.0, 0.0], device=device), device=device
+                    q_node, answer_class, torch.tensor([0.0, 1.0, 0.0, 0.0, 0.0, 0.0], device=device), device=device
                 )
             else:
                 assert_local_softmax(
@@ -89,6 +95,9 @@ def test_symmetric(device):
             print(f"\nQuestion {i}:")
             print(f"Inferred constraint: {q_node.getAttribute(answer_class, 'ILP')}")
 
-            assert_ilp_result(
-                q_node, answer_class, torch.tensor([0.0, 0.0, 0.0, 0.0, 1.0, 0.0], device=device), device=device
+            expected = (
+                torch.tensor([0.0, 1.0, 0.0, 0.0, 0.0, 0.0], device=device)
+                if i == 0
+                else torch.tensor([1.0, 0.0, 0.0, 0.0, 0.0, 0.0], device=device)
             )
+            assert_ilp_result(q_node, answer_class, expected, device=device)
