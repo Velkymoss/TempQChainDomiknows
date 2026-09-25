@@ -8,7 +8,7 @@ from domiknows.sensor.pytorch.learners import ModuleLearner
 from domiknows.sensor.pytorch.relation_sensors import CompositionCandidateSensor
 from domiknows.sensor.pytorch.sensors import FunctionalSensor, JointSensor, ReaderSensor
 
-from tempQchain.graphs.graph_fr import (
+from tempQchain.graphs.graph import (
     answer_class,
     graph,
     question,
@@ -32,7 +32,7 @@ from tempQchain.programs.utils import check_symmetric, check_transitive, read_la
 logger = get_logger(__name__)
 
 
-def program_declaration_tb_dense_fr(
+def program_declaration_tb_dense(
     device: torch.device,
     *,
     pmd: bool = False,

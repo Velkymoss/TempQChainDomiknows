@@ -9,8 +9,8 @@ import torch
 from sklearn.utils.class_weight import compute_class_weight
 
 from tempQchain.logger import get_logger
-from tempQchain.programs.program_fr import (
-    program_declaration_tb_dense_fr,
+from tempQchain.programs.program import (
+    program_declaration_tb_dense,
 )
 from tempQchain.readers.temporal_reader import TemporalReader
 from tempQchain.utils import get_class_distribution, get_train_labels, sample_batches
@@ -130,7 +130,7 @@ def main(args: Any) -> None:
     class_distribution = get_class_distribution(test_set)
     logger.info(f"Test class distribution: {class_distribution}")
 
-    program = program_declaration_tb_dense_fr(
+    program = program_declaration_tb_dense(
         cur_device,
         pmd=args.pmd,
         beta=args.beta,

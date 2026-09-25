@@ -24,7 +24,7 @@ def create_tb_dense(
 
 
 @app.command()
-def temporal_fr(
+def train_model(
     # Training parameters
     seed: int = typer.Option(42, help="Seed value used for experiment"),
     model: str = typer.Option("bert", help="Model used"),
@@ -63,7 +63,7 @@ def temporal_fr(
 ):
     import argparse
 
-    import tempQchain.temporal_fr as temporal_fr
+    import tempQchain.train as train
 
     args = argparse.Namespace(
         seed=seed,
@@ -96,7 +96,7 @@ def temporal_fr(
         c_lr_decay_param=c_lr_decay_param,
         run_name=run_name,
     )
-    temporal_fr.main(args)
+    train.main(args)
 
 
 @app.command()

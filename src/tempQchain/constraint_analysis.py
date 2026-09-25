@@ -7,7 +7,7 @@ import torch
 from domiknows.program.model.base import Mode
 
 from tempQchain.logger import get_logger
-from tempQchain.programs.program_fr import program_declaration_tb_dense_fr
+from tempQchain.programs.program import program_declaration_tb_dense
 from tempQchain.readers.temporal_reader import TemporalReader
 from tempQchain.utils import get_class_distribution
 
@@ -45,7 +45,7 @@ def main(args: Any) -> None:
     class_distribution = get_class_distribution(test_constraints_set)
     logger.info(f"Test constraints class distribution: {class_distribution}")
 
-    program = program_declaration_tb_dense_fr(
+    program = program_declaration_tb_dense(
         cur_device,
         pmd=args.pmd,
         beta=args.beta,
