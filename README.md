@@ -102,8 +102,3 @@ if '.' in self.programName:
 ```
 
 **Why this is needed:** The library uses `.index('.')` which throws a `ValueError` when no dot is found in the program name. This happens when using CLI entry points like `q-chain temporal-fr` where the name doesn't have a file extension.
-
-## TODO
-- Update graphs with latest syntax from graph tests
-- Implement f1 and loss calculation for YN mode
-- Implement experiment tracking for YN mode
