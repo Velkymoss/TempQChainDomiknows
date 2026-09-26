@@ -99,23 +99,6 @@ trans_rules = {  # rule 1
     # ("simultaneous", "vague"): ["vague"],
 }
 
-valDocs = [
-    "APW19980227.0487.tml",
-    "CNN19980223.1130.0960.tml",
-    "NYT19980212.0019.tml",
-    "PRI19980216.2000.0170.tml",
-    "ed980111.1130.0089.tml",
-    "APW19980227.0489.tml",
-    "APW19980227.0494.tml",
-    "APW19980308.0201.tml",
-    "APW19980418.0210.tml",
-    "CNN19980126.1600.1104.tml",
-    "CNN19980213.2130.0155.tml",
-    "NYT19980402.0453.tml",
-    "PRI19980115.2000.0186.tml",
-    "PRI19980306.2000.1675.tml",
-]
-
 
 def stratified_group_split(df, test_frac=0.15, val_frac=0.15, random_state=42):
     groups = df["doc_id"]
@@ -175,11 +158,21 @@ def stratified_group_split_best_seed(df, test_frac=0.15, val_frac=0.15, seeds=li
 
 def process_tb_dense(
     trans_rules: dict[tuple[str, str], list[str]] = trans_rules,
-    val_docs: list[str] = valDocs,
     save_rules_to_file: bool = False,
     saving_path: str = "data/",
     augment_train: bool = False,
 ) -> None:
+    """
+    Preprocesses the TB-Dense dataset into JSON files for training and evaluation.
+
+    Creates train/dev/test splits using stratified group splitting for ensuring identical
+    class distributions across splits. Each split contains YN/FR question-answer pairs.
+    When augment_train is True, adds constraint chains and facts info for logical
+    reasoning.
+
+    Saves four JSON files to disc: tb_dense_train, tb_dense_dev, tb_dense_test, and
+    tb_dense_test_constraints.
+    """
     # Load and preprocess data
     logger.info("Loading TB-Dense data...")
     path = "data/"
@@ -192,9 +185,6 @@ def process_tb_dense(
     tb_dense_docs = list(tb_dense_df.doc_id.unique())
     logger.info(f"There are {len(tb_dense_docs)} documents with {len(tb_dense_df)} relations in total.")
 
-    # val_docs = [doc.replace(".tml", "") for doc in val_docs]
-    # train_docs = [doc for doc in tb_dense_docs if doc not in val_docs]
-
     # Replace relation abbreviations with full names
     rel = {
         "s": "simultaneous",
@@ -205,19 +195,6 @@ def process_tb_dense(
         "b": "before",
     }
     tb_dense_df["relation"].replace(rel, inplace=True)
-
-    # train_df = tb_dense_df[tb_dense_df.doc_id.isin(train_docs)]
-    # val_df = tb_dense_df[tb_dense_df.doc_id.isin(val_docs)]
-
-    # val_df_shuffled = val_df.sample(frac=1, random_state=42).reset_index(drop=True)
-    # split_idx = len(val_df_shuffled) // 2
-    # dev_df = val_df_shuffled.iloc[:split_idx]
-    # test_df = val_df_shuffled.iloc[split_idx:]
-
-    # Stratified split of val_df into dev and test sets
-    # dev_df, test_df = train_test_split(
-    #     val_df, test_size=0.5, random_state=42, stratify=val_df["relation"], shuffle=True
-    # )
 
     train_df, dev_df, test_df = stratified_group_split_best_seed(df=tb_dense_df)
 

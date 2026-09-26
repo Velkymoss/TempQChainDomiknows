@@ -125,7 +125,7 @@ class Question(BaseModel):
             )
         else:
             question = get_temporal_question(intermediate_fact.relation)
-            
+
             batch_question = BatchQuestion(
                 question_text=question,
                 story_text=article,
@@ -313,6 +313,49 @@ class Story(BaseModel):
 
 
 class TemporalReader:
+    """
+    Reader for temporal reasoning data to convert raw story-question data into batched format.
+
+    Parses JSON data containing stories with temporal relations
+    and associated questions (FR/YN types), then organizes them into batches
+    for training or evaluation. Supports constraint-based reasoning by
+    preserving reasoning chains through intermediate questions when present
+    in the source data.
+
+    Parameters
+    ----------
+    data : list[dict]
+        Raw dataset loaded from JSON, containing story and question structures.
+    question_type : str
+        Type of questions to extract ("FR" for factual recall, "YN" for yes/no).
+    batch_size : int
+        Number of questions per batch. When set to 1, each batch contains a
+        single question without intermediate chain questions.
+
+    Attributes
+    ----------
+    batches : list[list[BatchQuestion]]
+        Processed batches ready for model training and evaluation.
+    data : list[dict]
+        Original raw data.
+    question_type : str
+        YN or FR question type.
+    batch_size : int
+        Configured batch size.
+
+    Methods
+    -------
+    from_file(file_path, question_type, batch_size, domiknows_format=True)
+        Class method that creates a TemporalReader instance from a JSON file
+        and converts the raw data into a format suitable for model training.
+    create_batches()
+        Processes raw data into batched BatchQuestion objects.
+    convert_to_domiknows_format(use_int_labels=True)
+        Converts batches to domiknows-compatible dict format with joined strings.
+    get_statistics()
+        Returns dict with dataset stats: batch counts, sizes, chain usage.
+    """
+
     def __init__(self, data: list[dict], question_type: str, batch_size: int):
         self.data = data
         self.question_type = question_type
@@ -385,14 +428,3 @@ class TemporalReader:
         return (
             f"Dataset(batches={len(self.batches)}, question_type='{self.question_type}', batch_size={self.batch_size})"
         )
-
-
-if __name__ == "__main__":
-    question_type = "FR"
-    split = "train"
-
-    dataset = TemporalReader.from_file(
-        file_path=f"data/tb_dense_{split}.json", question_type=question_type, batch_size=8, domiknows_format=False
-    )
-    print(dataset)
-    print(dataset.get_statistics())

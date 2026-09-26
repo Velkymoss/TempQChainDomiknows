@@ -19,6 +19,17 @@ logger = get_logger(__name__)
 
 
 def main(args: Any) -> None:
+    """
+    Entry point for training a temporal relation extraction model.
+
+    Sets up seeding, configures the device, loads and preprocesses train/validation/test
+    splits from TB-Dense JSON files, and trains the model using the specified hyperparameters
+    and method.
+
+    Logs configuration, progress, and results to both the logger and MLflow
+    (if enabled). Saves the best model to disk and optionally saves it
+    as an MLflow artifact.
+    """
     SEED = args.seed
     np.random.seed(SEED)
     random.seed(SEED)

@@ -15,6 +15,9 @@ logger = get_logger(__name__)
 
 
 def main(args: Any) -> None:
+    """
+    Entry point for evaluating constraint satisfaction of a temporal relation extraction model.
+    """
     SEED = args.seed
     logger.info(f"Model: {args.model}")
     np.random.seed(SEED)

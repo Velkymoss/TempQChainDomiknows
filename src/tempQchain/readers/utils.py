@@ -149,6 +149,3 @@ def get_batch_question_article(identifier: str, event_1: str, event_2: str, cont
         logger.warning(f"Event missing for event pair {event_1}:{event_2} for article {identifier}")
     return batch_article
 
-
-if __name__ == "__main__":
-    print(get_batch_question_article("CNN19980213.2130.0155", "t133", "t135"))
