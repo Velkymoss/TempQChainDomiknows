@@ -17,7 +17,7 @@ from tests.graphs.graph import get_graph
 @pytest.mark.parametrize(
     "predictions,log_conclusion_weight,expected_ilp,vacuously_true",
     [
-        # Case 1: Current test - uniform log distribution for 3rd question
+        # Case 1: uniform logits distribution for 3rd question
         (
             [0, 0, -1],
             1.0,

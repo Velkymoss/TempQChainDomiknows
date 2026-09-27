@@ -150,7 +150,7 @@ class FrSpecificDummyLearner(TorchLearner):
             elif 0 <= pred_idx < self.num_labels:
                 result[i, pred_idx] = self.high_score
 
-            if self.logit_weight_conclusion != 1.0 and i == 2:
+            if self.logit_weight_conclusion != 1.0 and (i+1)-len(self.predictions)==0:
                 result[i, :] *= self.logit_weight_conclusion
         logger.info(f"Dummy learner logits: \n{result}")
         return result
