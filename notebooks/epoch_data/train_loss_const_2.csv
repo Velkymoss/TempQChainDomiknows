@@ -1,8 +1,0 @@
-"Run","Run ID","metric","step","timestamp","value"
-"bert_seed_2_constraints_c-freq-inc_10_c-lr-decay-param_1.0_c-lr_0.05","6fd8c76eaf794279a85eb89d91b1ea55","train_loss","1","1766436047811","1.7538561820983887"
-"bert_seed_2_constraints_c-freq-inc_10_c-lr-decay-param_1.0_c-lr_0.05","6fd8c76eaf794279a85eb89d91b1ea55","train_loss","2","1766436048129","1.3661682605743408"
-"bert_seed_2_constraints_c-freq-inc_10_c-lr-decay-param_1.0_c-lr_0.05","6fd8c76eaf794279a85eb89d91b1ea55","train_loss","3","1766436048412","0.9924819469451904"
-"bert_seed_2_constraints_c-freq-inc_10_c-lr-decay-param_1.0_c-lr_0.05","6fd8c76eaf794279a85eb89d91b1ea55","train_loss","4","1766436048710","0.8233993649482727"
-"bert_seed_2_constraints_c-freq-inc_10_c-lr-decay-param_1.0_c-lr_0.05","6fd8c76eaf794279a85eb89d91b1ea55","train_loss","5","1766436049005","0.7069857716560364"
-"bert_seed_2_constraints_c-freq-inc_10_c-lr-decay-param_1.0_c-lr_0.05","6fd8c76eaf794279a85eb89d91b1ea55","train_loss","6","1766436049299","0.61482834815979"
-"bert_seed_2_constraints_c-freq-inc_10_c-lr-decay-param_1.0_c-lr_0.05","6fd8c76eaf794279a85eb89d91b1ea55","train_loss","7","1766436049588","0.5388393402099609"
