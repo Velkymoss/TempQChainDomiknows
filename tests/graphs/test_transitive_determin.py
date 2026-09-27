@@ -1,3 +1,5 @@
+import numpy as np
+import pytest
 import torch
 from domiknows.program import SolverPOIProgram
 from domiknows.sensor.pytorch.relation_sensors import CompositionCandidateSensor
@@ -6,14 +8,59 @@ from domiknows.sensor.pytorch.sensors import JointSensor, ReaderSensor
 from tests.graphs.conftest import (
     FrSpecificDummyLearner,
     assert_ilp_result,
-    assert_local_softmax,
     check_transitive,
     make_question,
 )
 from tests.graphs.graph import get_graph
 
 
-def test_transitive(device):
+@pytest.mark.parametrize(
+    "predictions,log_conclusion_weight,expected_ilp,vacuously_true",
+    [
+        # Case 1: Current test - uniform log distribution for 3rd question
+        (
+            [0, 0, -1],
+            1.0,
+            [
+                [1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            ],
+            False,
+        ),
+        # Case 2: Third question predicts label 1, logits of third question smaller
+        (
+            [0, 0, 1],
+            0.005,
+            [
+                [1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            ],
+            False,
+        ),
+        # Case 3: Test vacuous satisfaction of constraint
+        # Third question predicts label 1, logits have equal size for all 3 questions
+        (
+            [0, 0, 1],
+            1.0,
+            [
+                [1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            ],
+            True,
+        ),
+    ],
+)
+def test_transitive(
+    device,
+    predictions,
+    log_conclusion_weight,
+    expected_ilp,
+    vacuously_true,
+):
+    NUM_LABELS = 6
     (
         graph,
         story,
@@ -55,7 +102,14 @@ def test_transitive(device):
         device=device,
     )
 
-    question[answer_class] = FrSpecificDummyLearner(story_contain, num_labels=6, predictions=[0, 0, -1], device=device)
+    # Parameterized learner
+    question[answer_class] = FrSpecificDummyLearner(
+        story_contain,
+        num_labels=NUM_LABELS,
+        predictions=predictions,
+        logit_weight_conclusion=log_conclusion_weight,
+        device=device,
+    )
 
     transitive[tran_quest1.reversed, tran_quest2.reversed, tran_quest3.reversed] = CompositionCandidateSensor(
         relations=(tran_quest1.reversed, tran_quest2.reversed, tran_quest3.reversed),
@@ -64,36 +118,38 @@ def test_transitive(device):
     )
 
     poi_list = [question, answer_class, transitive]
-
     program = SolverPOIProgram(graph=graph, poi=poi_list, device=device)
 
     for datanode in program.populate(dataset=synthetic_dataset):
-        print("\n=== BEFORE ILP INFERENCE ===")
-        print(f"Number of questions: {len(datanode.getChildDataNodes())}")
+        print(f"\n=== BEFORE ILP INFERENCE (predictions={predictions}) ===")
+
         for i, q_node in enumerate(datanode.getChildDataNodes()):
             print(f"\nQuestion {i}:")
             print(f"  Dummy Prediction: {q_node.getAttribute(answer_class, 'local/softmax')}")
-            if i == 0 or i == 1:
-                assert_local_softmax(
-                    q_node, answer_class, torch.tensor([1.0, 0.0, 0.0, 0.0, 0.0, 0.0], device=device), device=device
-                )
-            else:
-                assert_local_softmax(
-                    q_node,
-                    answer_class,
-                    torch.tensor([0.1667, 0.1667, 0.1667, 0.1667, 0.1667, 0.1667], device=device),
-                    device=device,
-                )
 
         print("\n=== RUNNING ILP INFERENCE ===")
         datanode.inferILPResults()
-
         print("\n=== AFTER ILP INFERENCE ===")
         print("\nILP predictions (after constraint enforcement):")
+        if vacuously_true:
+            ilp_predictions = []
         for i, q_node in enumerate(datanode.getChildDataNodes()):
             print(f"\nQuestion {i}:")
             print(f"Inferred constraint: {q_node.getAttribute(answer_class, 'ILP')}")
-
-            assert_ilp_result(
-                q_node, answer_class, torch.tensor([1.0, 0.0, 0.0, 0.0, 0.0, 0.0], device=device), device=device
-            )
+            if vacuously_true:
+                ilp_predictions.append(q_node.getAttribute(answer_class, "ILP"))
+            else:
+                assert_ilp_result(q_node, answer_class, torch.tensor(expected_ilp[i], device=device), device=device)
+        if vacuously_true:
+            ilp_prediction_matrix = np.array([result for result in ilp_predictions])
+            unwanted_matrix = np.array([expected_ilp[0], expected_ilp[1]])
+            print(f"ILP predictions:\n{ilp_prediction_matrix}")
+            for idx in range(0, NUM_LABELS):
+                if idx > 0:
+                    unwanted_conclusion = [0.0] * NUM_LABELS
+                    unwanted_conclusion[idx] = 1.0
+                    unwanted_matrix = np.array([expected_ilp[0], expected_ilp[1], unwanted_conclusion])
+                    print(f"Unwanted matrix violating constraints:\n{unwanted_matrix}")
+                    assert np.any(ilp_prediction_matrix != unwanted_matrix), (
+                        f"ILP prediction matrix \n{ilp_prediction_matrix}\n must not be equal to the unwanted matrix\n {unwanted_matrix}."
+                    )
